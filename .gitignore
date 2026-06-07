@@ -9,3 +9,7 @@ coverage
 .vite
 apps/api/prisma/migrations/dev.db
 /deck
+/.agents
+/agents
+/.agent
+/agent
