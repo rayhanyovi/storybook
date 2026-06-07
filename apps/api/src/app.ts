@@ -39,3 +39,5 @@ app.use((_req, _res, next) => {
 });
 
 app.use(errorHandler);
+
+export default app;

@@ -1,6 +1,8 @@
 import type { ApiError } from '@storybook/shared';
 
-const BASE = import.meta.env['VITE_API_URL'] ?? 'http://localhost:3000/api';
+const BASE =
+  import.meta.env['VITE_API_URL'] ??
+  (import.meta.env.PROD ? '/api' : 'http://localhost:3000/api');
 
 function getToken() {
   // DEMO-only: JWT stored in localStorage. REAL: httpOnly secure cookie.

@@ -185,23 +185,20 @@ storybook/
 
 ## Deployment
 
-### Web → Vercel
+### Vercel monorepo
 
-1. Import the monorepo into Vercel.
-2. Set **Root Directory** to `apps/web`.
-3. Set env var `VITE_API_URL` to your deployed API URL (e.g. `https://storybook-api.railway.app/api`).
-4. Deploy — Vercel picks up `apps/web/vercel.json` automatically.
-
-### API → Render / Railway
-
-1. Connect the repo and point the service to `apps/api/`.
-2. Render: import `apps/api/render.yaml` or set build/start commands manually:
-   - **Build:** `pnpm install && pnpm build`
-   - **Start:** `pnpm start:prod` (runs `prisma migrate deploy` then `node dist/server.js`)
-3. Set env vars in the dashboard:
-   - `DATABASE_URL` — Neon or Supabase connection string
+1. Import the repository into Vercel.
+2. Keep **Root Directory** as the repository root. Do not set it to `apps/web`.
+3. Vercel uses root `vercel.json`:
+   - **Install:** `pnpm install`
+   - **Build:** `pnpm build:vercel`
+   - **Output:** `apps/web/dist`
+   - **API:** Express is mounted through `api/index.ts` and served under `/api/*`.
+4. Set env vars in Vercel:
+   - `DATABASE_URL` — Neon or Supabase pooled PostgreSQL connection string
    - `JWT_SECRET` — a long random string
-   - `CORS_ORIGIN` — your Vercel URL
+   - `CORS_ORIGIN` — your Vercel URL, or leave same-origin browser calls on `/api`
+5. Leave `VITE_API_URL` unset for monorepo deploys. The web app defaults to `/api` in production.
 
 ### Database → Neon / Supabase
 
@@ -210,6 +207,8 @@ storybook/
 DATABASE_URL=postgresql://... pnpm exec prisma migrate deploy
 DATABASE_URL=postgresql://... pnpm db:seed
 ```
+
+Run those commands from `apps/api` or pass `--schema apps/api/prisma/schema.prisma` when running from the repo root.
 
 ---
 

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "pnpm --filter './apps/*' --parallel dev",
     "build": "pnpm -r build",
+    "build:vercel": "pnpm --filter @storybook/api db:generate && pnpm --filter @storybook/api build && pnpm --filter @storybook/web build",
     "test": "pnpm -r test",
     "lint": "pnpm -r lint",
     "agent:round": "bash scripts/agent-round.sh"

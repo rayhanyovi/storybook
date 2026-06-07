@@ -74,7 +74,7 @@ function bg(slide, color = C.bg) { slide.background = { color }; }
 function pill(slide, text, x, y, o = {}) {
   const fs = o.fontSize || 11;
   const h = o.h || 0.34;
-  const w = o.w || 0.38 + String(text).length * (fs * 0.0086);
+  const w = o.w || 0.38 + String(text).length * (fs * 0.0103);
   slide.addShape("roundRect", {
     x, y, w, h, rectRadius: h / 2,
     fill: { color: o.fill || C.muted },
@@ -338,8 +338,8 @@ function iconRow(slide, x, y, w, key, fill, title, desc, o = {}) {
   const c = cols(3, 0.34);
   const surfs = [
     { key: "child", col: C.teal, entry: "Default after login", can: ["Browse the catalog grid", "Read accessible books", "See locked items softly"], cannot: ["Buy or subscribe", "Manage or CRUD"], name: "Kid", mascot: "oyen_2" },
-    { key: "key", col: C.coral, entry: "PIN gate from kid mode", can: ["Subscribe & renew", "Buy-to-keep books", "Library + account"], cannot: ["Catalog CRUD", "(that’s admin)"], name: "Parent" },
-    { key: "userCog", col: C.purple, entry: "Separate admin account", can: ["Book & category CRUD", "Draft → publish → archive", "Per-page story content"], cannot: ["Kid/parent shopping", "flows"], name: "Admin" },
+    { key: "key", col: C.coral, entry: "PIN gate from kid mode", can: ["Subscribe & renew", "Buy-to-keep books", "Library + account"], cannot: ["Catalog CRUD — that’s admin"], name: "Parent" },
+    { key: "userCog", col: C.purple, entry: "Separate admin account", can: ["Book & category CRUD", "Draft → publish → archive", "Per-page story content"], cannot: ["Kid / parent shopping flows"], name: "Admin" },
   ];
   surfs.forEach((sf, i) => {
     const x = c[i].x, w = c[i].w;
@@ -372,7 +372,7 @@ function iconRow(slide, x, y, w, key, fill, title, desc, o = {}) {
   const c = cols(2, gap), ch = 2.28, rowGap = 0.26;
   const quads = [
     { key: "bookReader", col: C.teal, t: "Kid surface", items: ["Discover page + filtered catalog grid", "Age filter chips (2–4, 4–6, 6–8, 8+)", "Paper-flip reader, immersive full-screen", "Locked books → gentle “Ask a grown-up”"] },
-    { key: "key", col: C.coral, t: "Parent surface · PIN-gated", items: ["Kid ↔ Parent toggle via 4-digit PIN", "Subscription status, expiry & renew", "Buy-to-keep individual books", "Owned library survives cancellation"] },
+    { key: "key", col: C.coral, t: "Parent surface · PIN-gated", items: ["Kid / Parent toggle via 4-digit PIN", "Subscription status, expiry & renew", "Buy-to-keep individual books", "Owned library survives cancellation"] },
     { key: "creditCard", col: C.gold, t: "Checkout · mock Stripe-style", items: ["Pre-filled demo card, test-mode badge", "“Simulate declined card” failure path", "Confetti + toast on success", "Handles purchase & subscription types"] },
     { key: "slidersH", col: C.purple, t: "Admin surface", items: ["Full catalog CRUD + soft archive", "Slide-based content editor (cover → pages)", "Per-page text with character counter", "Draft → Published → Archived lifecycle"] },
   ];
@@ -518,16 +518,17 @@ function iconRow(slide, x, y, w, key, fill, title, desc, o = {}) {
   stackBox(x1, midY, boxW, boxH, "react", C.teal, "apps/web", ["React 19 + Vite 8", "TanStack Query v5", "Tailwind v4 · shadcn/ui", "Framer Motion"]);
   stackBox(x2, midY, boxW, boxH, "server", C.coral, "apps/api", ["Express 5 + TypeScript", "Prisma 5 → PostgreSQL", "JWT + bcrypt · Zod", "Vitest"]);
   // shared box below, centered under the gap
-  const sx = (x1 + x2 + boxW) / 2 - boxW / 2, sy = midY + boxH + 0.55;
-  stackBox(sx, sy, boxW, 1.55, "cube", C.purple, "packages/shared", ["TypeScript DTOs & contracts", "BookWithAccess · AccessResult · UserDTO"]);
+  const sW = 4.0;
+  const sx = (x1 + x2 + boxW) / 2 - sW / 2, sy = midY + boxH + 0.55;
+  stackBox(sx, sy, sW, 1.7, "cube", C.purple, "packages/shared", ["TypeScript DTOs & contracts", "BookWithAccess · AccessResult · UserDTO"]);
 
   // arrows: web <-> api (double), api/web <- shared
-  s.addText("◀ HTTP / JSON ▶", { x: x1 + boxW, y: midY + 0.55, w: gapX, h: 0.4, align: "center", valign: "middle", fontFace: F.body, fontSize: 9.5, bold: true, color: C.inkSoft });
+  s.addText("HTTP / JSON", { x: x1 + boxW, y: midY + 0.55, w: gapX, h: 0.4, align: "center", valign: "middle", fontFace: F.body, fontSize: 9.5, bold: true, color: C.inkSoft });
   s.addShape("line", { x: x1 + boxW, y: midY + boxH / 2, w: gapX, h: 0, line: { color: C.inkSoft, width: 1.75, endArrowType: "triangle", beginArrowType: "triangle" } });
   // shared up-arrows
-  s.addShape("line", { x: sx + boxW * 0.3, y: sy, w: 0, h: -0.55, line: { color: C.purple, width: 1.75, endArrowType: "triangle" } });
-  s.addShape("line", { x: sx + boxW * 0.7, y: sy, w: 0, h: -0.55, line: { color: C.purple, width: 1.75, endArrowType: "triangle" } });
-  s.addText("imported by\nweb + api", { x: sx + boxW + 0.2, y: sy + 0.35, w: 2.5, h: 0.8, fontFace: F.body, fontSize: 10.5, italic: true, color: C.inkSoft, valign: "middle", lineSpacingMultiple: 1.05 });
+  s.addShape("line", { x: sx + sW * 0.3, y: sy, w: 0, h: -0.55, line: { color: C.purple, width: 1.75, endArrowType: "triangle" } });
+  s.addShape("line", { x: sx + sW * 0.7, y: sy, w: 0, h: -0.55, line: { color: C.purple, width: 1.75, endArrowType: "triangle" } });
+  s.addText("imported by\nweb + api", { x: sx + sW + 0.2, y: sy + 0.35, w: 2.2, h: 0.8, fontFace: F.body, fontSize: 10.5, italic: true, color: C.inkSoft, valign: "middle", lineSpacingMultiple: 1.05 });
 
   // right rail: API surface stat
   const rx = x2 + boxW + 0.7, rw = PAGEW - MX - rx;

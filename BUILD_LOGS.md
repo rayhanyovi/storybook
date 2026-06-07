@@ -398,3 +398,34 @@ pnpm --filter @storybook/web build
 
 **Known issues:**
 - Vite still reports the existing large bundle warning; not related to the content wizard.
+
+---
+
+## 2026-06-07 · TASK-044 Vercel Monorepo Deploy Prep
+
+**Files changed:**
+- `vercel.json` — added root Vercel config for monorepo deploys
+- `api/index.ts` — added Vercel Express function entrypoint
+- `package.json` — added `build:vercel`
+- `apps/api/src/app.ts` — exported the Express app as default for Vercel
+- `apps/web/src/lib/api.ts` — default production API base now uses same-origin `/api`
+- `apps/web/vercel.json` — removed stale placeholder API env
+- `.env.example` — added `CORS_ORIGIN`
+- `README.md` — replaced split Render/Railway deploy notes with Vercel monorepo notes
+- `docs/TECH.md` — aligned deployment notes with the Vercel monorepo target
+
+**What was implemented:**
+Prepared the repo to deploy from the monorepo root on Vercel. Vercel now installs from the root, generates Prisma Client, type-checks the API, builds the Vite app, serves static output from `apps/web/dist`, and routes `/api/*` to the existing Express app through a Vercel Function.
+
+**How to test it:**
+```bash
+pnpm --filter @storybook/api build
+pnpm --filter @storybook/api test
+pnpm build:vercel
+```
+
+In Vercel, import the repo with root directory set to the repository root, set `DATABASE_URL`, `JWT_SECRET`, and optionally `CORS_ORIGIN`, then deploy.
+
+**Known issues:**
+- Database migrations and seed data still need to be run once against the hosted Neon/Supabase database.
+- Vite still reports the existing large bundle warning; it is not a deployment failure.

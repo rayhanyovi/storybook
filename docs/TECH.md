@@ -436,11 +436,11 @@ shadcn add:  npx shadcn@latest add button card dialog sheet input label form sel
 13. **Parent mode:** subscribe, purchase (buy-to-keep), library, account/PIN management.
 14. **Admin:** book table + create/edit (slug required) + archive form with `AlertDialog` + content wizard for cover image and page text.
 15. **Polish:** framer-motion (kid 400ms / parent 200ms), all empty/error/404 Oyen states, Swagger, README + demo script.
-16. **Deploy:** DB → Neon/Supabase; API → Render/Railway (Docker); web → Vercel (`VITE_API_URL` = deployed API URL).
+16. **Deploy:** DB → Neon/Supabase; API + web → Vercel from the monorepo root. Root `vercel.json` builds `apps/web`, mounts the Express API via `api/index.ts`, and serves browser API calls on same-origin `/api`.
 
 ## 13. Deployment & submission
-- **Backend repo + deployed API:** monorepo; API on Render/Railway, DB on Neon/Supabase.
-- **Project link:** web on Vercel.
+- **Backend repo + deployed API:** monorepo; API on Vercel Functions, DB on Neon/Supabase.
+- **Project link:** web on Vercel from the same monorepo project.
 - **README must include:** `docker compose up -d`, `prisma migrate dev`, `seed` command, seeded creds (`parent@demo` / `admin@demo`, password `password`, PIN `1234`), full demo walkthrough script aligned to PRODUCT.md §7 flows, and DEMO vs REAL note for reviewers.
 
 ## 14. Open items
