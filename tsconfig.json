@@ -6,9 +6,10 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "baseUrl": ".",
     "paths": {
-      "@storybook/shared": ["packages/shared/src/index.ts"]
+      "@storybook/shared": [
+        "./packages/shared/src/index.ts"
+      ]
     }
   }
 }
