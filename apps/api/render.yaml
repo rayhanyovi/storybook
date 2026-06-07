@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: storybook-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: DATABASE_URL
+        sync: false  # set in Render dashboard → connect Neon/Supabase
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        sync: false  # set to your Vercel URL, e.g. https://storybook.vercel.app

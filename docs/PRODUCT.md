@@ -115,6 +115,7 @@ Parents are highly sensitive about screen time. The product is positioned as **"
 **Admin (separate account)**
 - Book CRUD: create, edit, archive (soft-delete).
 - Manage categories; set status (draft / published / archived), price, age range.
+- Manage story content: set the book image and enter text page-by-page with a simple next/previous flow.
 
 **Cross-cutting**
 - Access enforcement: browse = soft (lock badges), content = hard (blocked).
@@ -126,7 +127,7 @@ Parents are highly sensitive about screen time. The product is positioned as **"
 |---|---|---|---|
 | **Kid** | Default after login | Browse, read accessible books, see locked items | Buy, subscribe, manage, CRUD |
 | **Parent** | PIN gate from kid mode (or Parent chip → PIN) | Subscribe, buy, library, account | CRUD (that's admin) |
-| **Admin** | Log in as `admin@demo` | Book/category CRUD | (Not the kid/parent shopping flows) |
+| **Admin** | Log in as `admin@demo` | Book/category CRUD, story content editing | (Not the kid/parent shopping flows) |
 
 **Profile chips (demo convenience):** *Kid* → parent account, lands in kid mode · *Parent* → parent account, then PIN → parent mode · *Admin* → admin account → admin panel.
 
@@ -174,7 +175,7 @@ Any book → (kid: "ask a grown-up" → PIN) → parent mode book detail → "Bu
 Open accessible book → reader → **swipe / paper-flip** through pages (single page on narrow, two-page spread on wide) → last page → **reward** (confetti + Oyen celebrate) → back to library.
 
 ### 7.6 Admin
-Log in as `admin@demo` → book table → Create/Edit (title, author, description, cover slot, price, age range, categories, status) → Archive (soft-delete, confirm dialog). Archived books stay readable for owners, hidden from others.
+Log in as `admin@demo` → book table → Create/Edit (title, author, description, cover slot, price, age range, categories, status) → Pages → set book image + enter page text with Prev/Next → Archive (soft-delete, confirm dialog). Archived books stay readable for owners, hidden from others.
 
 ## 8. Access control — product view
 

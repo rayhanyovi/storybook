@@ -112,9 +112,23 @@ model Book {
   status      BookStatus @default(DRAFT)
   categories  Category[] @relation("BookCategories")
   purchases   Purchase[]
+  pages       BookPage[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   @@index([status])
+}
+
+model BookPage {
+  id        String   @id @default(uuid())
+  bookId    String
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  index     Int
+  imageSlot String?
+  text      String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([bookId, index])
+  @@index([bookId])
 }
 
 model Category {
@@ -179,8 +193,12 @@ export interface BookDTO {
   categories: CategoryDTO[];
 }
 export interface BookWithAccess extends BookDTO { access: AccessResult; }
-export interface BookPage { index: number; imageSlot: string; label: string; }
+export interface BookPage { index: number; imageSlot: string; label: string; text: string; }
 export interface BookContent { bookId: string; pages: BookPage[]; }
+export interface AdminBookPageInput { index: number; imageSlot?: string | null; text: string; }
+export interface AdminBookContentDTO {
+  bookId: string; coverSlot: string | null; pageCount: number; pages: BookPage[];
+}
 export interface UserDTO { id: string; email: string; role: Role; onboardingCompletedAt: string | null; }
 export interface ApiError { error: { code: string; message: string; details?: unknown }; }
 ```
@@ -244,16 +262,18 @@ Base path `/api`. Auth = `Authorization: Bearer <jwt>`. All errors → `ApiError
 - `GET /api/books/:id` *(auth)* → `200 BookWithAccess` · `404`
 - `GET /api/books/:id/content` *(auth)* → `200 BookContent` · `403` if locked
   ```
-  // Implementation: no BookPage table — pages are generated dynamically.
-  // DEMO-only reason: placeholder pages have no real content to store; generating
-  // from slug + index is sufficient. REAL: pages would have their own table/CDN records.
+  // Implementation: page rows store admin-authored text and optional image slots.
+  // Missing image slots still fall back to generated placeholder registry slots.
   const pages = Array.from({ length: book.pageCount }, (_, i) => ({
     index:     i + 1,
-    imageSlot: `book.page.${book.slug}.${i + 1}`,
+    imageSlot: storedPage?.imageSlot ?? `book.page.${book.slug}.${i + 1}`,
     label:     `page - ${book.title} #${i + 1}`,
+    text:      storedPage?.text ?? '',
   }));
   ```
 - `POST /api/books` *(admin)* `{ slug, title, author, description, coverSlot, priceCents, ageMin, ageMax, pageCount, categoryIds[], status }` → `201 BookDTO`
+- `GET /api/books/:id/admin-content` *(admin)* → `200 AdminBookContentDTO`
+- `PUT /api/books/:id/admin-content` *(admin)* `{ coverSlot, pageCount, pages:[{index,imageSlot?,text}] }` → `200 AdminBookContentDTO`
 - `PATCH /api/books/:id` *(admin)* partial → `200 BookDTO`
 - `DELETE /api/books/:id` *(admin)* → `200 { id, status:"ARCHIVED" }` (soft-delete)
 
@@ -281,11 +301,11 @@ Payment endpoints are atomic (`prisma.$transaction`: write `Payment` + entitleme
 | `/` (home), `/category/:slug`, `/book/:id` | Kid | auth |
 | `/read/:id` | Kid (reader) | auth + `canAccess` (else redirect to detail) |
 | `/parent`, `/parent/library`, `/parent/account` | Parent | auth + **PIN** |
-| `/admin`, `/admin/books`, `/admin/books/:id` | Admin | auth + role ADMIN |
+| `/admin`, `/admin/books`, `/admin/books/:id`, `/admin/books/:id/content` | Admin | auth + role ADMIN |
 | `*` | NotFound (Oyen 404) | — |
 
 ### State & data
-- **TanStack Query** for all server state; keys in `queryKeys.ts` (`books`, `book(id)`, `library`, `categories`). Mutations (subscribe/purchase/CRUD) invalidate `books`, `book`, `library`.
+- **TanStack Query** for all server state; keys in `queryKeys.ts` (`books`, `book(id)`, `bookContent(id)`, `adminBookContent(id)`, `library`, `categories`). Mutations (subscribe/purchase/CRUD/content) invalidate affected book/content/library keys.
 - **Typed API client** (`lib/api.ts`): attaches JWT, parses `ApiError`, throws typed errors → toast via sonner.
 - **AuthProvider:** token + `UserDTO` (incl. `onboardingCompletedAt`). **ModeProvider:** kid/parent. **PinProvider:** demo PIN gate.
 - **Onboarding guard:** on app load, if `user.role === 'USER' && !user.onboardingCompletedAt` → redirect to `/onboarding`. After step 4, call `POST /api/auth/onboarding/complete` → query-invalidate `me` → redirect to `/`.
@@ -300,7 +320,7 @@ Payment endpoints are atomic (`prisma.$transaction`: write `Payment` + entitleme
   const verifyPin = (input: string) => input === getStoredPin();
   ```
   Set during onboarding step 3 (`PinSetup`). Read by `ParentGate` on every parent-mode entry. Persists across refresh so the demo experience is smooth.
-- Reader uses **`react-pageflip`** (single page narrow / two-page spread wide); each page renders `PlaceholderImage` with the `imageSlot`/`label` from `GET /books/:id/content`.
+- Reader uses **`react-pageflip`** (single page narrow / two-page spread wide); each page renders `PlaceholderImage` with the `imageSlot`/`label` from `GET /books/:id/content`, plus the stored page text.
 - **Reader: disable pinch-to-zoom.** Set `touch-action: pan-y` on the reader container + `<meta name="viewport" content="user-scalable=no">`. Toddlers accidentally pinch-to-zoom causing disorientation — this is a documented child UX problem, not an edge case.
 - **Kid mode: oversized tap targets.** All interactive elements in kid mode: `min-h-[64px] min-w-[64px]`, primary actions `min-h-[72px]`. Enforced via Tailwind utility classes, not ad-hoc.
 - **Animation gates.** Kid mode route transitions use 400ms (vs 200ms parent). All `framer-motion` `AnimatePresence` wrappers check `mode context` and apply the correct duration. The `RewardOverlay` auto-dismisses after 3s and does not loop.
@@ -366,7 +386,7 @@ This seeds: FREE, LOCKED, OWNED, OWNED+ARCHIVED out of the box; live-subscribe d
 | Auth | JWT + seeded users, `localStorage` token | OAuth2 + httpOnly cookies, sessions |
 | Parent PIN | Plain string in `localStorage` — **DEMO only, zero security claim** | Hashed server-side (bcrypt) + biometric fallback (Face ID / fingerprint) |
 | Onboarding state | `onboardingCompletedAt` field in DB — **this is actually the correct real-world approach too** | Same DB field; additionally synced across devices |
-| Book pages | Generated dynamically from `slug + pageCount` — **DEMO only; no real content to store** | Dedicated `BookPage` table / CDN records with actual image URLs + audio |
+| Book pages | `BookPage` rows store page text and optional image slots; missing images fall back to generated placeholder slots | CDN-backed page art, audio narration, word timing, and localization |
 | Payments | Mock, `$transaction`, forced-fail flag | Stripe/Midtrans + webhooks + idempotency |
 | Sub expiry | Lazy check at read time | Cron/renewal webhook |
 | Search | Prisma `WHERE`/`contains` | Postgres FTS / Algolia |
@@ -405,8 +425,8 @@ shadcn add:  npx shadcn@latest add button card dialog sheet input label form sel
 2. **API scaffold:** Express + TS, `app.ts`/`server.ts`, env (zod), prisma singleton, errors, central handler, `/health`. `docker compose up -d` → `prisma migrate dev` → `seed`.
 3. **Auth:** login (JWT `{sub,role,email}`, 7d) + middleware + `/auth/me` + `/auth/onboarding/complete`.
 4. **Access core:** `resolveAccess` + `access.service.test.ts` (the full edge-case matrix as tests). Pass before any endpoint uses it.
-5. **Books read:** list (filter/pagination + per-book `access{}`), detail, `/content` (dynamic page generation, hard `403` gate), visibility rules.
-6. **Books admin:** CRUD + `requireRole('ADMIN')`, soft-delete → ARCHIVED.
+5. **Books read:** list (filter/pagination + per-book `access{}`), detail, `/content` (stored page text + placeholder fallback, hard `403` gate), visibility rules.
+6. **Books admin:** CRUD + `requireRole('ADMIN')`, soft-delete → ARCHIVED, admin content wizard endpoints.
 7. **Payments:** subscribe (renew +30d) + purchase (atomic `$transaction`, idempotent, buy-to-keep, `simulate` forced-fail).
 8. **Library + categories** endpoints.
 9. **Web scaffold:** Vite + Tailwind v3 + shadcn init + `shadcn add <component-list>` + token CSS vars (DESIGN §2) + Fredoka/Nunito via `@fontsource` + providers + typed API client + `PlaceholderImage` + `ChunkyButton`.
@@ -414,7 +434,7 @@ shadcn add:  npx shadcn@latest add button card dialog sheet input label form sel
 11. **Kid mode:** home grid, category filter, book detail, `AccessBadge`, locked → `ParentGate` (PIN `1234`), `Mascot` / `EmptyState`.
 12. **Reader:** `react-pageflip` + `BookContent` pages from API + `RewardOverlay` (confetti, 3s auto-dismiss).
 13. **Parent mode:** subscribe, purchase (buy-to-keep), library, account/PIN management.
-14. **Admin:** book table + create/edit (slug required) + archive form with `AlertDialog`.
+14. **Admin:** book table + create/edit (slug required) + archive form with `AlertDialog` + content wizard for cover image and page text.
 15. **Polish:** framer-motion (kid 400ms / parent 200ms), all empty/error/404 Oyen states, Swagger, README + demo script.
 16. **Deploy:** DB → Neon/Supabase; API → Render/Railway (Docker); web → Vercel (`VITE_API_URL` = deployed API URL).
 

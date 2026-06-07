@@ -167,7 +167,7 @@ Big book covers in a 2–3 col grid, large icon bottom-nav, minimal words, masco
 Same warmth, more density: prices, manage subscription, purchase history, library, account. Persistent subtle `ModeBadge: Parent`. Checkout and entering parent mode both require the PIN.
 
 ### Admin (separate `ADMIN` account)
-Most utilitarian but still on-brand: data table of books, create/edit forms (Form + Input + Select for categories, status, price), soft-delete (archive) with confirm `AlertDialog`. Draft/Published/Archived states clearly tagged.
+Most utilitarian but still on-brand: data table of books, create/edit forms (Form + Input + Select for categories, status, price), a content wizard for book image + page text, and soft-delete (archive) with confirm `AlertDialog`. Draft/Published/Archived states clearly tagged. The content wizard should show a direct cover preview, page number controls, one focused text area, and Prev/Next actions that save progress.
 
 ### PIN parent-gate (design)
 Full-screen friendly overlay: mascot (holding a lock) + "Ask a grown-up 🐾", `InputOTP` 4 digits, big number pad feel. Wrong PIN → gentle shake + mascot reaction, no scary red. First run → `PinSetup` to choose a 4-digit PIN.

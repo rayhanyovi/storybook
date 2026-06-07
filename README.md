@@ -1,0 +1,221 @@
+# Storybook
+
+A cozy paid digital children's book library demo. Kids browse and read in a safe interface; parents manage subscriptions and purchases behind a PIN gate; admins manage the catalog.
+
+## Stack
+
+- **API** — Express v5 · TypeScript · Prisma v5 · PostgreSQL
+- **Web** — Vite · React · Tailwind v4 · shadcn/ui · TanStack Query · framer-motion
+- **Auth** — JWT (7-day), bcryptjs (10 rounds)
+- **Monorepo** — pnpm workspaces (`apps/api`, `apps/web`, `packages/shared`)
+
+---
+
+## Quick Start (Docker)
+
+```bash
+# 1. Clone and configure
+cp .env.example .env
+# Edit .env — set a real JWT_SECRET at minimum
+
+# 2. Start database + API
+docker compose up -d
+
+# 3. Run migrations and seed
+cd apps/api
+pnpm db:migrate
+pnpm db:seed
+
+# 4. Start the web dev server
+cd ../web
+pnpm dev
+# http://localhost:5173
+```
+
+---
+
+## Demo Script
+
+### Seeded credentials
+
+| Account | Email | Password | Role |
+|---------|-------|----------|------|
+| Parent | `parent@demo.com` | `password` | USER |
+| Admin | `admin@demo.com` | `password` | ADMIN |
+| Demo PIN | — | `1234` | — |
+
+### 1. First-time login (Parent flow)
+
+1. Open `http://localhost:5173`
+2. Click the **Parent** chip on the login screen — it auto-fills credentials and logs you in.
+3. **Onboarding** starts automatically (4 steps):
+   - Welcome -> How it works -> Set your PIN (`1234`) -> Who's reading? (enter a child name)
+4. You land on the **Kid home screen** — catalog of books.
+
+### 2. Kid Mode — reading a free book
+
+1. The default view is Kid Mode — the catalog shows all published books.
+2. Tap any book marked **FREE** -> Book Detail -> **Read now** -> Page-flip reader opens.
+3. Flip through all pages — a confetti burst fires on the last page.
+4. Hit **Back to library** to return.
+
+### 3. Parent Gate — unlocking a paid book
+
+1. Tap a book with a **LOCKED** badge.
+2. The **Parent Gate** overlay appears — enter PIN `1234`.
+3. Wrong PIN triggers a gentle shake animation.
+4. Correct PIN navigates to the Book Detail.
+
+### 4. Parent Mode — subscribe & buy
+
+1. From the Kid home, open **Profile** and switch to **Parent mode**, or use the **Parent** quick profile on login.
+2. Enter PIN `1234`.
+3. On the **Parent mode** page:
+   - Tap **Subscribe (Rp 49.000 / 30 days)** -> subscription activates, all catalog books unlock.
+   - Or tap **Buy** on individual books to own them permanently.
+
+### 5. Admin Mode — book management
+
+1. Log out, then click the **Admin** chip on the login screen.
+2. You land directly on `/admin` — a catalog table of all books.
+3. Click **+ New Book** to open the Create dialog — fill title, slug, category, price.
+4. Use **Edit** for updates and **Archive** to soft-delete a book. Archived books disappear from the public catalog but remain readable for owners.
+
+---
+
+## Submission Write-up
+
+### Key product decisions and assumptions
+
+The target buyer is a parent or guardian, while the target reader is a young child. This split drives the product: kids should never see checkout, while parents need fast, trustworthy controls for payment and library access. The MVP supports two monetization paths: subscription for temporary access to the live catalog, and one-time buy-to-keep purchases for permanent ownership. Admin CRUD is separated into an admin role so catalog management does not leak into the family-facing surfaces.
+
+Key assumptions:
+
+- Mock auth and payments are acceptable for proving the access-control model.
+- A small curated catalog is enough for the MVP because toddlers repeat stories.
+- English-only and tablet-first keep scope controlled.
+- PIN gating is the core trust mechanism for accidental-purchase prevention.
+
+### High-level roadmap
+
+- Now: mocked auth/payments, book CRUD, subscription, buy-to-keep, kid/parent/admin surfaces, PIN gate, reader, and deployment.
+- Next: real illustrated assets, audio narration, word highlighting, search, analytics events, and multi-child profiles.
+- Later: Stripe/Midtrans webhooks, refunds, grace periods, COPPA/GDPR-K review, offline downloads, localization, and richer parental controls.
+
+### Success metrics
+
+- Activation: new users who open at least one book in week one.
+- Free-to-paid conversion: first subscription or book purchase per user.
+- Monetization mix: subscription revenue versus one-time purchase revenue.
+- Retention/churn: renewed subscriptions versus expired subscriptions.
+- Engagement: books read per child per week.
+- Trust: refund or accidental-purchase support requests.
+
+### Access control design
+
+The backend resolves access in a single order: admin, free, owned, active subscription, locked. Browse endpoints attach access metadata so the UI can show badges, while content endpoints enforce access with hard `403` responses. Ownership is checked before subscription so a subscribed user who buys a book sees it as owned. Archived books are hidden from non-owners but remain readable for owners. Mock payment failure records a failed payment and does not create an entitlement.
+
+### System design
+
+The monorepo has `apps/api`, `apps/web`, and `packages/shared`. Shared DTOs prevent frontend/backend type drift. The API is Express + TypeScript + Prisma + PostgreSQL with modules for auth, books, access, payments, categories, and library. The web app is Vite + React + Tailwind + TanStack Query + React Router. TanStack Query owns server state and invalidates books, book details, and library data after purchase/subscription mutations.
+
+### How AI tools were used
+
+AI was used as the implementation pair for planning, scaffolding, UI iteration, and verification. Prompts focused on the assignment constraints: "digital library MVP with subscription and one-time purchase access rules", "three surfaces: kid, parent behind PIN, admin", and "tablet-first children's book design with restrained motion". Iterations improved the initial MVP by tightening access-state UI, removing kid-mode checkout cues, adding admin edit, correcting stale query invalidation, and aligning the README with the actual demo.
+
+---
+
+## Manual API testing
+
+```bash
+# Login
+TOKEN=$(curl -s -X POST http://localhost:3000/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"parent@demo.com","password":"password"}' | jq -r .token)
+
+# Browse books
+curl http://localhost:3000/api/books -H "Authorization: Bearer $TOKEN" | jq .
+
+# Subscribe
+curl -X POST http://localhost:3000/api/payments/subscribe \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{}'
+
+# My library
+curl http://localhost:3000/api/me/library -H "Authorization: Bearer $TOKEN" | jq .
+```
+
+---
+
+## Development
+
+```bash
+# Install all workspace deps
+pnpm install
+
+# API: type-check
+cd apps/api && pnpm tsc --noEmit
+
+# API: run tests (8 access-service tests)
+cd apps/api && pnpm test
+
+# Web: type-check + build
+cd apps/web && pnpm build
+
+# Reset and re-seed database
+cd apps/api && pnpm exec prisma migrate reset --force && pnpm db:seed
+```
+
+---
+
+## Project structure
+
+```
+storybook/
+├── apps/
+│   ├── api/          Express API (src/, prisma/, tests/)
+│   └── web/          Vite React app (src/)
+├── packages/
+│   └── shared/       Shared TypeScript types
+├── docs/             DESIGN.md · PRODUCT.md · TECH.md
+├── docker-compose.yml
+└── .env.example
+```
+
+---
+
+## Deployment
+
+### Web → Vercel
+
+1. Import the monorepo into Vercel.
+2. Set **Root Directory** to `apps/web`.
+3. Set env var `VITE_API_URL` to your deployed API URL (e.g. `https://storybook-api.railway.app/api`).
+4. Deploy — Vercel picks up `apps/web/vercel.json` automatically.
+
+### API → Render / Railway
+
+1. Connect the repo and point the service to `apps/api/`.
+2. Render: import `apps/api/render.yaml` or set build/start commands manually:
+   - **Build:** `pnpm install && pnpm build`
+   - **Start:** `pnpm start:prod` (runs `prisma migrate deploy` then `node dist/server.js`)
+3. Set env vars in the dashboard:
+   - `DATABASE_URL` — Neon or Supabase connection string
+   - `JWT_SECRET` — a long random string
+   - `CORS_ORIGIN` — your Vercel URL
+
+### Database → Neon / Supabase
+
+```bash
+# Get your DATABASE_URL from Neon/Supabase, then run once:
+DATABASE_URL=postgresql://... pnpm exec prisma migrate deploy
+DATABASE_URL=postgresql://... pnpm db:seed
+```
+
+---
+
+## Known demo shortcuts
+
+- JWT stored in `localStorage` (DEMO-only — use httpOnly cookies in production)
+- Parent PIN stored as plaintext in `localStorage` (DEMO-only — hash in production)
+- Book pages are generated dynamically from `slug + pageCount`; real images would be in a CDN
+- Payment flows are simulated (no real Stripe/FPX integration)

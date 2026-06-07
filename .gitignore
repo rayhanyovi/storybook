@@ -3,6 +3,7 @@ dist
 build
 .env
 .env.local
+apps/api/.env
 .DS_Store
 coverage
 .vite

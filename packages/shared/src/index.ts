@@ -44,10 +44,24 @@ export interface BookPage {
   index: number;
   imageSlot: string;
   label: string;
+  text: string;
 }
 
 export interface BookContent {
   bookId: string;
+  pages: BookPage[];
+}
+
+export interface AdminBookPageInput {
+  index: number;
+  imageSlot?: string | null;
+  text: string;
+}
+
+export interface AdminBookContentDTO {
+  bookId: string;
+  coverSlot: string | null;
+  pageCount: number;
   pages: BookPage[];
 }
 
