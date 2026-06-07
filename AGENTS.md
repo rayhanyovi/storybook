@@ -1,0 +1,42 @@
+# AGENTS.md
+
+## Source of Truth
+
+Read these files before making architectural decisions:
+
+1. `docs/PRODUCT.md` — product behavior, user flows, surfaces.
+2. `docs/TECH.md` — architecture, stack, schema, API contracts, build order.
+3. `docs/DESIGN.md` — visual system, components, motion, placeholder image rules.
+
+If there is conflict:
+- TECH.md wins for implementation architecture.
+- PRODUCT.md wins for product behavior.
+- DESIGN.md wins for UI/UX and visual decisions.
+
+## Working Rules
+
+- Do not implement multiple build phases at once.
+- Work only on the current task from `TASKS.md`. Unless I'm telling you to update the TASKS
+- Do not invent new architecture unless the current docs are impossible to implement.
+- Prefer small, reviewable changes.
+- After finishing, update `BUILD_LOGS.md` with:
+  - date
+  - task id
+  - files changed
+  - what was implemented
+  - how to test it
+  - known issues
+
+## Code Rules
+
+- Use TypeScript strictly.
+- Avoid duplicated types between frontend and backend; use `packages/shared`.
+- Keep API and web concerns separated.
+- Do not hardcode design colors outside Tailwind/CSS variables unless unavoidable.
+- Demo shortcuts must be clearly commented as DEMO-only.
+
+## Safety Rules
+
+- Never delete large folders without asking.
+- Never rewrite all docs unless explicitly requested.
+- Never change locked stack decisions from TECH.md without asking.
