@@ -40,11 +40,11 @@ If there is conflict:
 - Never delete large folders without asking.
 - Never rewrite all docs unless explicitly requested.
 - Never change locked stack decisions from TECH.md without asking.
-## Multi-Agent Rules
+<!-- ## Multi-Agent Rules -->
 
-This project may be worked on by multiple AI agents in separate git worktrees.
+<!-- This project may be worked on by multiple AI agents in separate git worktrees. -->
 
-### Frontend Agent
+<!-- ### Frontend Agent
 
 Frontend Agent owns:
 - `apps/web/**`
@@ -70,7 +70,7 @@ Backend Agent must not edit:
 - `apps/web/**`
 - `packages/shared/**`
 - root config files
-- lockfiles
+- lockfiles -->
 
 ### Shared Contract Rule
 
