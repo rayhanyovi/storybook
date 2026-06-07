@@ -40,3 +40,62 @@ If there is conflict:
 - Never delete large folders without asking.
 - Never rewrite all docs unless explicitly requested.
 - Never change locked stack decisions from TECH.md without asking.
+## Multi-Agent Rules
+
+This project may be worked on by multiple AI agents in separate git worktrees.
+
+### Frontend Agent
+
+Frontend Agent owns:
+- `apps/web/**`
+- `logs/frontend.md`
+
+Frontend Agent must not edit:
+- `apps/api/**`
+- `apps/api/prisma/**`
+- `apps/api/tests/**`
+- `packages/shared/**`
+- root config files
+- lockfiles
+
+### Backend Agent
+
+Backend Agent owns:
+- `apps/api/**`
+- `apps/api/prisma/**`
+- `apps/api/tests/**`
+- `logs/backend.md`
+
+Backend Agent must not edit:
+- `apps/web/**`
+- `packages/shared/**`
+- root config files
+- lockfiles
+
+### Shared Contract Rule
+
+`packages/shared/**` is contract territory.
+
+No agent may change it unless explicitly instructed by the user.
+
+If an agent needs a contract change, it must stop and report:
+- what type or field is missing
+- why it is needed
+- which frontend/backend code depends on it
+
+### Dependency Rule
+
+Agents must not install new dependencies or edit lockfiles unless explicitly instructed.
+
+If a dependency is needed, the agent must report:
+- package name
+- why it is needed
+- which files will use it
+
+### Task Rule
+
+Agents must implement only the assigned task.
+
+Agents must not edit `TASKS.md`.
+
+The user updates task status after review and merge.
