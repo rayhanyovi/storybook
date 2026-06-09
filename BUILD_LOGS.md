@@ -947,3 +947,29 @@ Verified against Supabase:
 **Known issues:**
 - Running `pnpm --dir apps/api db:seed` again will restore the seed script's demo purchase for the parent account; use the Parent mode reset button afterward for a fresh user state.
 - Rotate the Supabase database password because a temporary credential was shared during setup.
+
+---
+
+## 2026-06-09 · Project Cleanup
+
+**Files changed:**
+- `README.md` — updated demo flow, read-aloud, reset demo data, development commands, and deployment commands
+- `apps/web/src/lib/imageRegistry.ts` — removed registry entries for book assets that are no longer in the seeded catalog
+- `apps/web/public/**` — removed unused legacy logos, old favicon/svg files, unused mascot images, and orphaned book art sets
+- `apps/web/src/components/ui/**` — removed unused shadcn component files that had no imports
+- `BUILD_LOGS.md` — recorded this cleanup pass
+
+**What was implemented:**
+Cleaned unused tracked assets and unused UI component files, removing about 9.9 MB of public assets. The image registry now only maps catalog art that still exists in the current demo. README now matches the current Supabase/Vercel workflow and demo features.
+
+**How to test it:**
+```bash
+pnpm --filter @storybook/api build
+pnpm --filter @storybook/api test -- --run
+pnpm --filter @storybook/web build
+pnpm build:vercel
+```
+
+**Known issues:**
+- Vite still reports the existing large bundle warning; it is not related to the cleanup.
+- `BUILD_LOGS.md` still contains historical references to files that were removed later; those entries are kept as historical build notes.

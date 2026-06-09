@@ -21,9 +21,6 @@ export function resolveImage(slot: string): string | null {
     'book.cover.counting-oyen': '/illustration/books/oyen_counting_cover.png',
     'book.cover.brave-boat': '/illustration/books/brave_boat_cover.png',
     'book.cover.jungle-friends': '/illustration/books/jungle_adventure_cover.png',
-
-    'book.cover.oyen-cleans-up': '/illustration/books/oyen_cleans_up_cover.png',
-    'book.cover.oyen-says-thankyou': '/illustration/books/oyen_says_thankyou_cover.png',
   };
 
   if (direct[slot]) return direct[slot];
@@ -40,8 +37,6 @@ export function resolveImage(slot: string): string | null {
     'counting-oyen': 'oyen_counting',
     'brave-boat': 'brave_boat',
     'jungle-friends': 'jungle_adventure',
-    'oyen-cleans-up': 'oyen_cleans_up',
-    'oyen-says-thankyou': 'oyen_says_thankyou',
   };
 
   const prefix = pagePrefixes[slug];

@@ -1,6 +1,6 @@
 # Storybook
 
-A cozy paid digital children's book library demo. Kids browse and read in a safe interface; parents manage subscriptions and purchases behind a PIN gate; admins manage the catalog.
+A cozy paid digital children's book library demo. Kids browse and read in a safe interface; parents manage subscriptions, purchases, reading progress, and screen time behind a PIN gate; admins manage catalog metadata and page narration text.
 
 ## Stack
 
@@ -22,13 +22,11 @@ cp .env.example .env
 docker compose up -d
 
 # 3. Run migrations and seed
-cd apps/api
-pnpm db:migrate
-pnpm db:seed
+pnpm --dir apps/api db:migrate
+pnpm --dir apps/api db:seed
 
 # 4. Start the web dev server
-cd ../web
-pnpm dev
+pnpm --dir apps/web dev
 # http://localhost:5173
 ```
 
@@ -47,7 +45,7 @@ pnpm dev
 ### 1. First-time login (Parent flow)
 
 1. Open `http://localhost:5173`
-2. Click the **Parent** chip on the login screen — it auto-fills credentials and logs you in.
+2. Click **Start demo** to open sign in, then click the **Parent** chip — it auto-fills credentials and logs you in.
 3. **Onboarding** starts automatically (4 steps):
    - Welcome -> How it works -> Set your PIN (`1234`) -> Who's reading? (enter a child name)
 4. You land on the **Kid home screen** — catalog of books.
@@ -56,7 +54,7 @@ pnpm dev
 
 1. The default view is Kid Mode — the catalog shows all published books.
 2. Tap any book marked **FREE** -> Book Detail -> **Read now** -> Page-flip reader opens.
-3. Flip through all pages — a confetti burst fires on the last page.
+3. Tap **Bacakan** to hear the stored page narration, then flip through all pages — a confetti burst fires on the last page.
 4. Hit **Back to library** to return.
 
 ### 3. Parent Gate — unlocking a paid book
@@ -73,6 +71,8 @@ pnpm dev
 3. On the **Parent mode** page:
    - Tap **Subscribe (Rp 49.000 / 30 days)** -> subscription activates, all catalog books unlock.
    - Or tap **Buy** on individual books to own them permanently.
+   - Tap **Reset demo data** to remove the current user's subscriptions, purchases, payments, and reading progress for a fresh demo run.
+4. Open **Child Progress** from the profile menu to view reading stats and recent reading logs.
 
 ### 5. Admin Mode — book management
 
@@ -80,6 +80,7 @@ pnpm dev
 2. You land directly on `/admin` — a catalog table of all books.
 3. Click **+ New Book** to open the Create dialog — fill title, slug, category, price.
 4. Use **Edit** for updates and **Archive** to soft-delete a book. Archived books disappear from the public catalog but remain readable for owners.
+5. Use **Content** to edit cover/page image slots, page text for read-aloud narration, add pages, or delete pages.
 
 ---
 
@@ -98,8 +99,8 @@ Key assumptions:
 
 ### High-level roadmap
 
-- Now: mocked auth/payments, book CRUD, subscription, buy-to-keep, kid/parent/admin surfaces, PIN gate, reader, and deployment.
-- Next: real illustrated assets, audio narration, word highlighting, search, analytics events, and multi-child profiles.
+- Now: mocked auth/payments, book CRUD, subscription, buy-to-keep, kid/parent/admin surfaces, PIN gate, reader, read-aloud narration, screen-time limit, child progress logs, demo reset, illustrated assets, and deployment.
+- Next: word highlighting, search refinements, analytics events, and multi-child profiles.
 - Later: Stripe/Midtrans webhooks, refunds, grace periods, COPPA/GDPR-K review, offline downloads, localization, and richer parental controls.
 
 ### Success metrics
@@ -153,16 +154,20 @@ curl http://localhost:3000/api/me/library -H "Authorization: Bearer $TOKEN" | jq
 pnpm install
 
 # API: type-check
-cd apps/api && pnpm tsc --noEmit
+pnpm --filter @storybook/api build
 
 # API: run tests (8 access-service tests)
-cd apps/api && pnpm test
+pnpm --filter @storybook/api test -- --run
 
 # Web: type-check + build
-cd apps/web && pnpm build
+pnpm --filter @storybook/web build
 
 # Reset and re-seed database
-cd apps/api && pnpm exec prisma migrate reset --force && pnpm db:seed
+pnpm --dir apps/api exec prisma migrate reset --force
+pnpm --dir apps/api db:seed
+
+# Reset only the signed-in demo user's entitlements/progress
+# Parent mode -> Account snapshot -> Reset demo data
 ```
 
 ---
@@ -204,12 +209,12 @@ storybook/
 ### Database → Neon / Supabase
 
 ```bash
-# Get DATABASE_URL and DIRECT_URL from Supabase, then run once:
-DATABASE_URL=postgresql://... DIRECT_URL=postgresql://... pnpm exec prisma migrate deploy
-DATABASE_URL=postgresql://... DIRECT_URL=postgresql://... pnpm db:seed
+# Get DATABASE_URL and DIRECT_URL from Supabase, then run once from the repo root:
+DATABASE_URL=postgresql://... DIRECT_URL=postgresql://... pnpm --dir apps/api exec prisma migrate deploy
+DATABASE_URL=postgresql://... DIRECT_URL=postgresql://... pnpm --dir apps/api db:seed
 ```
 
-Run those commands from `apps/api` or pass `--schema apps/api/prisma/schema.prisma` when running from the repo root.
+You can also run the shorter commands from inside `apps/api`: `pnpm exec prisma migrate deploy` and `pnpm db:seed`.
 
 For Supabase:
 
@@ -224,5 +229,6 @@ For Supabase:
 
 - JWT stored in `localStorage` (DEMO-only — use httpOnly cookies in production)
 - Parent PIN stored as plaintext in `localStorage` (DEMO-only — hash in production)
-- Book pages are generated dynamically from `slug + pageCount`; real images would be in a CDN
+- Book page text is seeded and editable by admins; page art uses local demo assets or slot fallbacks. A real app would move media to CDN/storage.
+- Reset demo data is an authenticated DEMO-only endpoint for repeatable presentations.
 - Payment flows are simulated (no real Stripe/FPX integration)
