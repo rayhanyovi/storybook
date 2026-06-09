@@ -973,3 +973,25 @@ pnpm build:vercel
 **Known issues:**
 - Vite still reports the existing large bundle warning; it is not related to the cleanup.
 - `BUILD_LOGS.md` still contains historical references to files that were removed later; those entries are kept as historical build notes.
+
+---
+
+## 2026-06-09 · Vercel Prisma Generate Guard
+
+**Files changed:**
+- `apps/api/package.json` — made Prisma Client generation explicit in API build/generate scripts
+- `BUILD_LOGS.md` — recorded the deployment fix
+
+**What was implemented:**
+Made API builds run `prisma generate --schema prisma/schema.prisma` before TypeScript compilation. This prevents Vercel or any alternate build command from compiling against an empty/stale generated Prisma Client.
+
+**How to test it:**
+```bash
+pnpm --filter @storybook/api db:generate
+pnpm --filter @storybook/api build
+pnpm --filter @storybook/api test -- --run
+pnpm build:vercel
+```
+
+**Known issues:**
+- Vite still reports the existing large bundle warning; it is not related to Prisma generation.
