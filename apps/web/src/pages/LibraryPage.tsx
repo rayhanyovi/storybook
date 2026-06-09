@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useBooks, useLibrary } from '@/hooks/useBooks';
 import { useMode } from '@/providers/ModeProvider';
 
-const TABS = ['All', 'Free', 'Owned', 'Included'] as const;
+const TABS = ['All', 'In Progress', 'Free', 'Owned', 'Included'] as const;
 type Tab = (typeof TABS)[number];
 
 export default function LibraryPage() {
@@ -25,9 +25,11 @@ export default function LibraryPage() {
   const freeCount = accessible.filter(book => book.access.reason === 'FREE' || book.access.reason === 'ADMIN').length;
   const ownedCount = accessible.filter(book => book.access.reason === 'OWNED').length;
   const includedCount = accessible.filter(book => book.access.reason === 'SUBSCRIPTION').length;
+  const inProgressCount = accessible.filter(book => book.currentPage > 1 && book.currentPage < book.pageCount).length;
 
   const filtered = (() => {
     if (activeTab === 'All') return accessible;
+    if (activeTab === 'In Progress') return accessible.filter(book => book.currentPage > 1 && book.currentPage < book.pageCount);
     if (activeTab === 'Free') return accessible.filter(book => book.access.reason === 'FREE' || book.access.reason === 'ADMIN');
     if (activeTab === 'Owned') return accessible.filter(book => book.access.reason === 'OWNED');
     if (activeTab === 'Included') return accessible.filter(book => book.access.reason === 'SUBSCRIPTION');
@@ -44,12 +46,12 @@ export default function LibraryPage() {
       />
 
       <main className="mx-auto flex max-w-6xl flex-col gap-6 px-4 pt-6 md:px-7">
-        <section className="overflow-hidden rounded-[1.75rem] border border-[var(--line)] bg-[var(--card)] shadow-[0_18px_42px_rgba(58,46,40,0.1)]">
+        <section className="hidden overflow-hidden rounded-[1.75rem] border border-[var(--line)] bg-[var(--card)] shadow-[0_18px_42px_rgba(58,46,40,0.1)] md:block">
           <div className="grid gap-6 p-6 md:grid-cols-[auto_1fr] md:items-center md:gap-8 md:p-8">
             <div className="relative grid place-items-center overflow-hidden rounded-[1.5rem] bg-[var(--secondary)]/15 px-6 py-5">
               <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[var(--primary)]/10" />
               <div className="absolute -bottom-10 -left-6 h-24 w-24 rounded-full bg-[var(--secondary)]/25" />
-              <Mascot pose="reading" size="lg" />
+              <Mascot pose="emptyLibrary" size="lg" />
             </div>
 
             <div>
@@ -64,8 +66,9 @@ export default function LibraryPage() {
                 Everything the account can open right now — free books, owned books, and subscription-included stories all in one place.
               </p>
 
-              <div className="mt-5 grid grid-cols-3 gap-3">
+              <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
                 {[
+                  { label: 'Progress', value: inProgressCount, icon: BookOpen, tint: 'bg-[var(--secondary)]/20 text-[var(--ink)]' },
                   { label: 'Free', value: freeCount, icon: Star, tint: 'bg-[var(--color-accent-teal)]/15 text-[var(--color-accent-teal)]' },
                   { label: 'Owned', value: ownedCount, icon: BookOpen, tint: 'bg-[var(--color-success)]/15 text-[var(--color-success)]' },
                   { label: 'Included', value: includedCount, icon: Crown, tint: 'bg-[var(--color-info)]/15 text-[var(--color-info)]' }
@@ -115,7 +118,7 @@ export default function LibraryPage() {
           ) : filtered.length === 0 ? (
             <div className="grid place-items-center rounded-[1.6rem] border border-[var(--line)] bg-[var(--card)] py-16 text-center">
               <div className="flex flex-col items-center gap-4 px-5">
-                <Mascot pose="reading" size="lg" speech="Nothing here yet" />
+                <Mascot pose="emptyLibrary" size="lg" speech="Nothing here yet" />
                 <p className="max-w-sm text-sm font-semibold leading-relaxed text-[var(--ink-soft)]">
                   {activeTab === 'All'
                     ? "No accessible books yet. Start with a free story or ask a parent to unlock more."
@@ -139,7 +142,10 @@ export default function LibraryPage() {
                   variants={{ hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0 } }}
                   transition={{ duration: 0.22 }}
                 >
-                  <BookCard book={book} kidMode={isKid} />
+                  <BookCard
+                    book={book}
+                    kidMode={isKid}
+                  />
                 </motion.div>
               ))}
             </motion.div>

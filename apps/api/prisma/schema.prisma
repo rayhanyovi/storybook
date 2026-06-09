@@ -44,6 +44,7 @@ model User {
   subscriptions         Subscription[]
   purchases             Purchase[]
   payments              Payment[]
+  readingProgress       ReadingProgress[]
   createdAt             DateTime       @default(now())
   updatedAt             DateTime       @updatedAt
 }
@@ -64,6 +65,7 @@ model Book {
   categories  Category[] @relation("BookCategories")
   pages       BookPage[]
   purchases   Purchase[]
+  reads       ReadingProgress[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
@@ -128,4 +130,21 @@ model Payment {
   referenceId    String?
   idempotencyKey String?       @unique
   createdAt      DateTime      @default(now())
+}
+
+model ReadingProgress {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookId     String
+  book       Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  currentPage Int      @default(1)
+  readCount  Int      @default(0)
+  lastReadAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, bookId])
+  @@index([userId, readCount])
+  @@index([bookId])
 }

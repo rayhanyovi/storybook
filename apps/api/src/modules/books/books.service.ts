@@ -6,13 +6,15 @@ import type { BookWithCategories } from './books.repository.js';
 import {
   findBooks,
   findBookById,
+  findBookEngagement,
   findBookPages,
   createBook,
   updateBook,
   updateBookContent,
   archiveBook
 } from './books.repository.js';
-import type { ListBooksQuery, CreateBookBody, UpdateBookBody, UpdateBookContentBody } from './books.schema.js';
+import { prisma } from '../../lib/prisma.js';
+import type { ListBooksQuery, CreateBookBody, UpdateBookBody, UpdateBookContentBody, ReadingProgressBody } from './books.schema.js';
 
 function toBookDTO(book: BookWithCategories): BookDTO {
   return {
@@ -34,19 +36,33 @@ function toBookDTO(book: BookWithCategories): BookDTO {
 
 export async function listBooks(user: JwtPayload, query: ListBooksQuery) {
   const { data, total } = await findBooks(user, query);
-  const booksWithAccess: BookWithAccess[] = await Promise.all(
-    data.map(async book => ({
-      ...toBookDTO(book),
-      access: await resolveAccess(user, book)
-    }))
+  const engagementByBook = await findBookEngagement(user.sub, data.map(book => book.id));
+  const booksWithAccess = await Promise.all(
+    data.map(async book => {
+      const engagement = engagementByBook.get(book.id);
+      return {
+        ...toBookDTO(book),
+        access: await resolveAccess(user, book),
+        currentPage: engagement?.currentPage ?? 1,
+        readCount: engagement?.readCount ?? 0,
+        lastReadAt: engagement?.lastReadAt?.toISOString() ?? null
+      };
+    })
   );
   return { data: booksWithAccess, page: query.page, limit: query.limit, total };
 }
 
-export async function getBook(user: JwtPayload, id: string): Promise<BookWithAccess> {
+export async function getBook(user: JwtPayload, id: string) {
   const book = await findBookById(id, user);
   if (!book) throw new NotFoundError('Book not found');
-  return { ...toBookDTO(book), access: await resolveAccess(user, book) };
+  const engagement = (await findBookEngagement(user.sub, [book.id])).get(book.id);
+  return {
+    ...toBookDTO(book),
+    access: await resolveAccess(user, book),
+    currentPage: engagement?.currentPage ?? 1,
+    readCount: engagement?.readCount ?? 0,
+    lastReadAt: engagement?.lastReadAt?.toISOString() ?? null
+  };
 }
 
 export async function getBookContent(user: JwtPayload, id: string): Promise<BookContent> {
@@ -121,4 +137,38 @@ export async function adminUpdateBookContent(id: string, body: UpdateBookContent
 export async function adminArchiveBook(id: string) {
   const book = await archiveBook(id);
   return { id: book.id, status: 'ARCHIVED' as const };
+}
+
+export async function updateReadingProgress(user: JwtPayload, id: string, body: ReadingProgressBody) {
+  const book = await findBookById(id, user);
+  if (!book) throw new NotFoundError('Book not found');
+
+  const access = await resolveAccess(user, book);
+  if (!access.canAccess) throw new ForbiddenError('Access denied');
+
+  const now = new Date();
+  const currentPage = Math.min(body.currentPage, book.pageCount);
+
+  const progress = await prisma.readingProgress.upsert({
+    where: { userId_bookId: { userId: user.sub, bookId: book.id } },
+    update: {
+      currentPage,
+      readCount: body.completed ? { increment: 1 } : undefined,
+      lastReadAt: now
+    },
+    create: {
+      userId: user.sub,
+      bookId: book.id,
+      currentPage,
+      readCount: body.completed ? 1 : 0,
+      lastReadAt: now
+    }
+  });
+
+  return {
+    bookId: book.id,
+    currentPage: progress.currentPage,
+    readCount: progress.readCount,
+    lastReadAt: progress.lastReadAt.toISOString()
+  };
 }

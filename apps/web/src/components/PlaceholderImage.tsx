@@ -47,7 +47,7 @@ export function PlaceholderImage({ slot, label, ratio = '1/1', className }: Plac
         <img
           src={src}
           alt={label}
-          className="w-full h-full object-cover"
+          className="h-full w-full bg-[var(--muted)] object-contain"
           loading="lazy"
           draggable={false}
         />

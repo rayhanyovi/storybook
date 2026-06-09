@@ -1,24 +1,27 @@
-import { useState, useLayoutEffect, useEffect } from 'react';
+import { useState, useLayoutEffect, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import HTMLFlipBook from 'react-pageflip';
 import confetti from 'canvas-confetti';
-import { BookOpen, CheckCircle2, ChevronLeft } from 'lucide-react';
+import { BookOpen, CheckCircle2, ChevronLeft, Square, Volume2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { PlaceholderImage } from '@/components/PlaceholderImage';
 import { Mascot } from '@/components/Mascot';
 import { ChunkyButton } from '@/components/ChunkyButton';
+import { ParentGate } from '@/components/ParentGate';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useBook, useBookContent } from '@/hooks/useBooks';
+import { useBook, useBookContent, useUpdateReadingProgress } from '@/hooks/useBooks';
+import { useScreenTime } from '@/providers/ScreenTimeProvider';
 import type { BookPage } from '@storybook/shared';
 
-const HEADER_H = 44;
+const HEADER_H = 56;
 
 function calcDims(availW: number, availH: number) {
-  // Two portrait pages side by side (each page 3:4 ratio)
+  // Two landscape pages side by side (each page 4:3 ratio)
   let pageW = Math.floor(availW / 2);
-  let pageH = Math.floor(pageW * (4 / 3));
+  let pageH = Math.floor(pageW * (3 / 4));
   if (pageH > availH) {
     pageH = availH;
-    pageW = Math.floor(pageH * (3 / 4));
+    pageW = Math.floor(pageH * (4 / 3));
   }
   return { width: pageW, height: pageH };
 }
@@ -31,14 +34,38 @@ function getState() {
   return { portrait, dims };
 }
 
+function getVisibleNarrationText(pages: BookPage[], currentPage: number) {
+  const spreadStart = currentPage % 2 === 0 ? currentPage : currentPage - 1;
+  return pages
+    .slice(spreadStart, spreadStart + 2)
+    .map(page => page.text.trim())
+    .filter(Boolean)
+    .join('\n\n');
+}
+
 export default function ReaderPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: book } = useBook(id!);
   const { data: content, isLoading, isError } = useBookContent(id!);
+  const updateProgress = useUpdateReadingProgress();
+  const { isExpired: isScreenTimeExpired, clearKidSession } = useScreenTime();
+  const lastTrackedPage = useRef<number | null>(null);
+  const completedBookId = useRef<string | null>(null);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const screenTimeExpiredPage = useRef<number | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [finished, setFinished] = useState(false);
+  const [isReadingAloud, setIsReadingAloud] = useState(false);
+  const [showScreenTimeGate, setShowScreenTimeGate] = useState(false);
   const [{ portrait, dims }, setState] = useState(getState);
+  const startPageIndex = book?.currentPage && book.currentPage > 1 && book.currentPage < book.pageCount
+    ? book.currentPage - 1
+    : 0;
+  const speechSupported =
+    typeof window !== 'undefined' &&
+    'speechSynthesis' in window &&
+    typeof SpeechSynthesisUtterance !== 'undefined';
 
   useLayoutEffect(() => {
     const update = () => setState(getState());
@@ -58,13 +85,99 @@ export default function ReaderPage() {
       } catch { /* not supported */ }
     };
     enter();
-    return () => { if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); };
+    return () => {
+      if (speechSupported) window.speechSynthesis.cancel();
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    };
   }, []);
 
+  useEffect(() => {
+    setCurrentPage(startPageIndex);
+  }, [startPageIndex]);
+
+  useEffect(() => {
+    if (!isScreenTimeExpired) {
+      screenTimeExpiredPage.current = null;
+      setShowScreenTimeGate(false);
+      return;
+    }
+
+    if (finished) return;
+
+    if (screenTimeExpiredPage.current === null) {
+      screenTimeExpiredPage.current = currentPage;
+      return;
+    }
+
+    if (currentPage !== screenTimeExpiredPage.current) {
+      stopNarration();
+      setShowScreenTimeGate(true);
+    }
+  }, [currentPage, finished, isScreenTimeExpired]);
+
+  function stopNarration() {
+    if (!speechSupported) return;
+    utteranceRef.current = null;
+    window.speechSynthesis.cancel();
+    setIsReadingAloud(false);
+  }
+
+  function handleReadAloud() {
+    if (!speechSupported) {
+      toast.error('Read aloud is not supported in this browser.');
+      return;
+    }
+
+    if (!content) return;
+
+    if (isReadingAloud) {
+      stopNarration();
+      return;
+    }
+
+    const text = getVisibleNarrationText(content.pages, currentPage);
+    if (!text) {
+      toast.info('No story text on this page yet.');
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'en-US';
+    utterance.rate = 0.92;
+    utterance.pitch = 1.04;
+    utterance.onend = () => {
+      if (utteranceRef.current === utterance) {
+        utteranceRef.current = null;
+        setIsReadingAloud(false);
+      }
+    };
+    utterance.onerror = () => {
+      if (utteranceRef.current === utterance) {
+        utteranceRef.current = null;
+        setIsReadingAloud(false);
+        toast.error('Could not read this page aloud.');
+      }
+    };
+
+    window.speechSynthesis.cancel();
+    utteranceRef.current = utterance;
+    setIsReadingAloud(true);
+    window.speechSynthesis.speak(utterance);
+  }
+
   function handleFlip(e: { data: number }) {
+    if (isReadingAloud) stopNarration();
     const page = e.data;
+    const pageNumber = page + 1;
+    const isLastPage = !!content && page >= content.pages.length - 1;
     setCurrentPage(page);
-    if (content && page >= content.pages.length - 1) {
+    if (id && lastTrackedPage.current !== pageNumber) {
+      lastTrackedPage.current = pageNumber;
+      updateProgress.mutate({ bookId: id, currentPage: pageNumber, completed: false });
+    }
+    if (id && isLastPage && completedBookId.current !== id) {
+      completedBookId.current = id;
+      updateProgress.mutate({ bookId: id, currentPage: pageNumber, completed: true });
       setFinished(true);
       confetti({ particleCount: 140, spread: 90, origin: { y: 0.6 } });
     }
@@ -89,20 +202,33 @@ export default function ReaderPage() {
   return (
     <div className="fixed inset-0 bg-[#2C1A0E] flex flex-col" style={{ touchAction: 'pan-y' }}>
       <header
-        className="flex items-center justify-between px-4 shrink-0 z-10"
+        className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 shrink-0 z-10"
         style={{ height: HEADER_H }}
       >
         <ChunkyButton variant="light" size="sm" onClick={() => navigate(-1)}>
           <ChevronLeft className="w-4 h-4" /> Exit
         </ChunkyButton>
-        {book && (
-          <h2 className="text-white/70 font-[family-name:var(--font-display)] text-sm truncate max-w-xs">
-            {book.title}
-          </h2>
-        )}
-        <span className="text-white/40 text-xs font-[family-name:var(--font-body)]">
-          {currentPage + 1} / {content.pages.length}
-        </span>
+        <h2 className="hidden truncate text-center font-[family-name:var(--font-display)] text-sm text-white/70 sm:block">
+          {book?.title ?? 'Storybook'}
+        </h2>
+        <div className="flex items-center justify-end gap-2">
+          <ChunkyButton
+            type="button"
+            variant="light"
+            size="sm"
+            onClick={handleReadAloud}
+            disabled={!speechSupported}
+            aria-pressed={isReadingAloud}
+            title={speechSupported ? 'Read this page aloud' : 'Read aloud is not supported in this browser'}
+            className="px-3"
+          >
+            {isReadingAloud ? <Square className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+            {isReadingAloud ? 'Stop' : 'Bacakan'}
+          </ChunkyButton>
+          <span className="min-w-11 text-right font-[family-name:var(--font-body)] text-xs text-white/40">
+            {currentPage + 1} / {content.pages.length}
+          </span>
+        </div>
       </header>
 
       {/* Book area — centered, rotated 90° when portrait */}
@@ -117,13 +243,14 @@ export default function ReaderPage() {
         >
           {/* @ts-ignore react-pageflip types are loose */}
           <HTMLFlipBook
+            key={`${content.bookId}-${startPageIndex}`}
             width={dims.width}
             height={dims.height}
             showCover={false}
             onFlip={handleFlip}
             className=""
             style={{}}
-            startPage={0}
+            startPage={startPageIndex}
             size="fixed"
             minWidth={dims.width}
             maxWidth={dims.width}
@@ -151,7 +278,7 @@ export default function ReaderPage() {
                   <PlaceholderImage
                     slot={page.imageSlot}
                     label={page.label}
-                    ratio="3/4"
+                    ratio="4/3"
                     className="absolute inset-0 h-full w-full rounded-none border-0"
                   />
                   {page.text.trim() && (
@@ -180,6 +307,19 @@ export default function ReaderPage() {
             Back to library
           </ChunkyButton>
         </div>
+      )}
+
+      {showScreenTimeGate && (
+        <ParentGate
+          title="Screen time is up"
+          description="Enter the parent PIN to close kid mode."
+          speech="Oyen is getting sleepy"
+          mascotPose="sleeping"
+          onSuccess={() => {
+            clearKidSession();
+            navigate('/parent', { replace: true });
+          }}
+        />
       )}
     </div>
   );

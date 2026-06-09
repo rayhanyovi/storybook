@@ -5,5 +5,6 @@ export const queryKeys = {
   bookContent: (id: string) => ['bookContent', id] as const,
   adminBookContent: (id: string) => ['adminBookContent', id] as const,
   library: ['library'] as const,
+  bookRead: (id: string) => ['bookRead', id] as const,
   categories: ['categories'] as const
 };

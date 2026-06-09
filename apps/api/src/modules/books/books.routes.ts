@@ -11,7 +11,8 @@ import {
   adminGetBookContentHandler,
   updateBookHandler,
   adminUpdateBookContentHandler,
-  archiveBookHandler
+  archiveBookHandler,
+  updateReadingProgressHandler
 } from './books.controller.js';
 
 export const booksRouter = Router();
@@ -24,6 +25,7 @@ booksRouter.get('/:id/content', getBookContentHandler);
 booksRouter.get('/:id', getBookHandler);
 
 booksRouter.post('/', requireRole('ADMIN'), validate(createBookSchema), createBookHandler);
+booksRouter.post('/:id/progress', updateReadingProgressHandler);
 booksRouter.put('/:id/admin-content', requireRole('ADMIN'), validate(updateBookContentSchema), adminUpdateBookContentHandler);
 booksRouter.patch('/:id', requireRole('ADMIN'), validate(updateBookSchema), updateBookHandler);
 booksRouter.delete('/:id', requireRole('ADMIN'), archiveBookHandler);

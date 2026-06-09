@@ -37,7 +37,13 @@ export const updateBookContentSchema = z.object({
   })).default([])
 });
 
+export const readingProgressSchema = z.object({
+  currentPage: z.number().int().min(1),
+  completed: z.boolean().optional().default(false)
+});
+
 export type ListBooksQuery = z.infer<typeof listBooksSchema>;
 export type CreateBookBody = z.infer<typeof createBookSchema>;
 export type UpdateBookBody = z.infer<typeof updateBookSchema>;
 export type UpdateBookContentBody = z.infer<typeof updateBookContentSchema>;
+export type ReadingProgressBody = z.infer<typeof readingProgressSchema>;

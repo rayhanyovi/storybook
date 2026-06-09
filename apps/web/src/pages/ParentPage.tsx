@@ -1,11 +1,20 @@
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, CheckCircle2, ChevronLeft, Crown, CreditCard, LibraryBig, RefreshCw, ShieldCheck, XCircle } from 'lucide-react';
+import {
+  BookOpen,
+  CheckCircle2,
+  ChevronLeft,
+  Crown,
+  CreditCard,
+  LibraryBig,
+  RefreshCw,
+  ShieldCheck,
+  XCircle
+} from 'lucide-react';
 import { PlaceholderImage } from '@/components/PlaceholderImage';
 import { ChunkyButton } from '@/components/ChunkyButton';
 import { Mascot } from '@/components/Mascot';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLibrary } from '@/hooks/useBooks';
-import { useMode } from '@/providers/ModeProvider';
 
 function formatDate(date: string) {
   return new Date(date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
@@ -13,11 +22,9 @@ function formatDate(date: string) {
 
 export default function ParentPage() {
   const navigate = useNavigate();
-  const { setMode } = useMode();
   const { data: library, isLoading } = useLibrary();
 
   function exitParent() {
-    setMode('kid');
     navigate('/');
   }
 
@@ -31,7 +38,7 @@ export default function ParentPage() {
         <div className="mx-auto flex max-w-6xl items-center gap-3">
           <ChunkyButton variant="ghost" size="sm" onClick={exitParent}>
             <ChevronLeft className="h-4 w-4" />
-            Kid mode
+            Back to home
           </ChunkyButton>
           <div className="min-w-0 flex-1">
             <h1 className="font-[family-name:var(--font-display)] text-xl font-semibold leading-none text-[var(--ink)]">Parent mode</h1>
@@ -116,6 +123,8 @@ export default function ParentPage() {
             <div className="mt-4 grid grid-cols-2 gap-3">
               {[
                 { label: 'Owned', value: library?.owned.length ?? 0, icon: BookOpen },
+                { label: 'Purchased', value: library?.owned.length ?? 0, icon: CreditCard },
+                { label: 'Access', value: library?.hasActiveSub ? 'Sub' : 'Basic', icon: LibraryBig },
                 { label: 'Subscription', value: library?.hasActiveSub ? 'On' : 'Off', icon: Crown }
               ].map(item => (
                 <div key={item.label} className="rounded-2xl bg-[var(--background)] p-4">
@@ -155,7 +164,7 @@ export default function ParentPage() {
                     onClick={() => navigate(`/book/${book.id}`)}
                     className="overflow-hidden rounded-[1.25rem] border border-[var(--line)] bg-[var(--background)] text-left transition hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(58,46,40,0.1)]"
                   >
-                    <PlaceholderImage slot={book.coverSlot ?? `book.cover.${book.slug}`} label={`cover - ${book.title}`} ratio="3/4" className="rounded-none border-0" />
+                    <PlaceholderImage slot={book.coverSlot ?? `book.cover.${book.slug}`} label={`cover - ${book.title}`} ratio="4/3" className="rounded-none border-0" />
                     <div className="p-3">
                       <p className="line-clamp-2 font-[family-name:var(--font-display)] font-semibold leading-tight text-[var(--ink)]">{book.title}</p>
                       <p className="mt-1 text-xs font-bold text-[var(--ink-soft)]">{book.status === 'ARCHIVED' ? 'Archived, still owned' : 'Owned forever'}</p>

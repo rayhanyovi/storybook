@@ -100,8 +100,8 @@ export default function CheckoutPage() {
                   <PlaceholderImage
                     slot={book?.coverSlot ?? `book.cover.${book?.slug ?? 'story'}`}
                     label={`cover - ${itemTitle}`}
-                    ratio="3/4"
-                    className="h-24 w-[4.5rem] shrink-0 rounded-xl border-0"
+                    ratio="4/3"
+                    className="h-24 w-32 shrink-0 rounded-xl border-0"
                   />
                 )
               ) : (

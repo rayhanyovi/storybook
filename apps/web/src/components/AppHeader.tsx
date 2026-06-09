@@ -1,19 +1,17 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Baby, BookOpen, ChevronLeft, LockKeyhole, User, type LucideIcon } from 'lucide-react';
+import { BookOpen, ChevronLeft, Clock3, User, type LucideIcon } from 'lucide-react';
 import { ChunkyButton } from '@/components/ChunkyButton';
-import { ParentGate } from '@/components/ParentGate';
 import { ProfileSheet } from '@/components/ProfileSheet';
-import { BottomTabBar } from '@/components/BottomTabBar';
-import { Switch } from '@/components/ui/switch';
 import { useMode } from '@/providers/ModeProvider';
+import { useScreenTime } from '@/providers/ScreenTimeProvider';
 import { useLibrary } from '@/hooks/useBooks';
 
 interface AppHeaderProps {
   title?: string;
   subtitle?: string;
   icon?: LucideIcon;
-  active?: 'discover' | 'library';
+  active?: 'discover' | 'search' | 'library' | 'profile';
   showBack?: boolean;
 }
 
@@ -26,20 +24,15 @@ function navClass(isActive: boolean) {
 export function AppHeader({ title, subtitle, icon: Icon = BookOpen, active, showBack }: AppHeaderProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isKid, setMode } = useMode();
+  const { isKid } = useMode();
+  const { isActive } = useScreenTime();
   const { data: library } = useLibrary();
   const [profileOpen, setProfileOpen] = useState(false);
-  const [showGate, setShowGate] = useState(false);
 
   const childName = sessionStorage.getItem('childName');
   const resolvedTitle = title ?? (childName ? `${childName}'s Storybook` : 'Storybook');
   const resolvedSubtitle = subtitle ?? 'Digital library';
   const hasActiveSub = library?.hasActiveSub;
-
-  function handleModeChange(next: boolean) {
-    if (next) setMode('kid');
-    else setShowGate(true);
-  }
 
   function goSubscribe() {
     navigate(`/checkout?type=subscription&returnTo=${encodeURIComponent(location.pathname)}`);
@@ -54,7 +47,7 @@ export function AppHeader({ title, subtitle, icon: Icon = BookOpen, active, show
               type="button"
               onClick={() => navigate(-1)}
               aria-label="Go back"
-              className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[var(--muted)] text-[var(--ink-soft)] transition hover:bg-[var(--line)]"
+              className="hidden h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[var(--muted)] text-[var(--ink-soft)] transition hover:bg-[var(--line)] md:grid"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
@@ -76,24 +69,16 @@ export function AppHeader({ title, subtitle, icon: Icon = BookOpen, active, show
 
           <nav className="hidden items-center gap-1 md:flex">
             <Link to="/" className={navClass(active === 'discover')}>Discover</Link>
+            <Link to="/search" className={navClass(active === 'search')}>Search</Link>
             <Link to="/library" className={navClass(active === 'library')}>Library</Link>
           </nav>
 
-          <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-[var(--line)] bg-[var(--card)] px-2.5 py-2 shadow-[0_8px_18px_rgba(58,46,40,0.06)] sm:gap-2.5 sm:px-3">
-            {isKid ? (
-              <Baby className="h-4 w-4 text-[var(--primary)]" strokeWidth={2.4} />
-            ) : (
-              <LockKeyhole className="h-4 w-4 text-[var(--primary)]" strokeWidth={2.4} />
-            )}
-            <span className="hidden text-xs font-extrabold text-[var(--ink-soft)] sm:inline">
-              {isKid ? 'Kid' : 'Parent'}
-            </span>
-            <Switch
-              checked={isKid}
-              onCheckedChange={handleModeChange}
-              aria-label={isKid ? 'Switch to parent mode' : 'Switch to kid mode'}
-            />
-          </div>
+          {isKid && isActive && (
+            <div className="hidden min-h-10 items-center gap-2 rounded-2xl bg-[var(--secondary)]/30 px-3 text-xs font-extrabold text-[var(--ink)] md:flex">
+              <Clock3 className="h-4 w-4" strokeWidth={2.4} />
+              Rest timer on
+            </div>
+          )}
 
           {!isKid && !hasActiveSub && (
             <ChunkyButton size="sm" onClick={goSubscribe} className="hidden lg:inline-flex">
@@ -103,7 +88,7 @@ export function AppHeader({ title, subtitle, icon: Icon = BookOpen, active, show
 
           <button
             onClick={() => setProfileOpen(true)}
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[var(--muted)] text-[var(--ink-soft)] transition hover:bg-[var(--line)]"
+            className="hidden h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[var(--muted)] text-[var(--ink-soft)] transition hover:bg-[var(--line)] md:grid"
             aria-label="Open profile"
           >
             <User className="h-5 w-5" />
@@ -111,12 +96,7 @@ export function AppHeader({ title, subtitle, icon: Icon = BookOpen, active, show
         </div>
       </header>
 
-      <BottomTabBar onProfileOpen={() => setProfileOpen(true)} />
       <ProfileSheet open={profileOpen} onOpenChange={setProfileOpen} />
-
-      {showGate && (
-        <ParentGate onSuccess={() => setShowGate(false)} onCancel={() => setShowGate(false)} />
-      )}
     </>
   );
 }

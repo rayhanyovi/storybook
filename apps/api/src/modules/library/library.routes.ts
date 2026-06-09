@@ -8,6 +8,26 @@ export const libraryRouter = Router();
 
 libraryRouter.use(authenticate);
 
+type BookWithCategories = Prisma.BookGetPayload<{ include: { categories: true } }>;
+
+function toBookDTO(book: BookWithCategories): BookDTO {
+  return {
+    id: book.id,
+    slug: book.slug,
+    title: book.title,
+    author: book.author,
+    description: book.description,
+    coverSlot: book.coverSlot,
+    priceCents: book.priceCents,
+    currency: book.currency,
+    ageMin: book.ageMin,
+    ageMax: book.ageMax,
+    pageCount: book.pageCount,
+    status: book.status as BookDTO['status'],
+    categories: book.categories as CategoryDTO[]
+  };
+}
+
 libraryRouter.get('/', async (req, res, next) => {
   try {
     const userId = req.user.sub;
@@ -22,29 +42,36 @@ libraryRouter.get('/', async (req, res, next) => {
       include: { book: { include: { categories: true } } }
     });
 
+    const readingProgress = await prisma.readingProgress.findMany({
+      where: { userId },
+      include: { book: { include: { categories: true } } },
+      orderBy: { lastReadAt: 'desc' }
+    });
+
     type PurchaseWithBook = Prisma.PurchaseGetPayload<{ include: { book: { include: { categories: true } } } }>;
 
-    const owned: BookDTO[] = purchases.map((p: PurchaseWithBook) => ({
-      id: p.book.id,
-      slug: p.book.slug,
-      title: p.book.title,
-      author: p.book.author,
-      description: p.book.description,
-      coverSlot: p.book.coverSlot,
-      priceCents: p.book.priceCents,
-      currency: p.book.currency,
-      ageMin: p.book.ageMin,
-      ageMax: p.book.ageMax,
-      pageCount: p.book.pageCount,
-      status: p.book.status as BookDTO['status'],
-      categories: p.book.categories as CategoryDTO[]
-    }));
+    const owned: BookDTO[] = purchases.map((p: PurchaseWithBook) => toBookDTO(p.book));
 
     res.json({
       subscription: sub
         ? { status: sub.status, expiresAt: sub.expiresAt.toISOString() }
         : null,
       owned,
+      readingProgress: readingProgress.map(item => ({
+        book: toBookDTO(item.book),
+        currentPage: item.currentPage,
+        readCount: item.readCount,
+        lastReadAt: item.lastReadAt.toISOString()
+      })),
+      favoriteBooks: [...readingProgress]
+        .sort((a, b) => b.readCount - a.readCount || b.lastReadAt.getTime() - a.lastReadAt.getTime())
+        .slice(0, 5)
+        .map(item => ({
+          book: toBookDTO(item.book),
+          currentPage: item.currentPage,
+          readCount: item.readCount,
+          lastReadAt: item.lastReadAt.toISOString()
+        })),
       hasActiveSub: !!sub
     });
   } catch (err) {

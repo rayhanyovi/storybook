@@ -1,8 +1,8 @@
 import { PlaceholderImage } from './PlaceholderImage';
 
-type Pose = 'waving' | 'reading' | 'sleeping' | 'celebrating' | 'locked' | '404' | 'error' | 'loading';
+export type MascotPose = 'waving' | 'reading' | 'sleeping' | 'celebrating' | 'locked' | '404' | 'error' | 'loading' | 'emptyLibrary' | 'hero';
 
-const poseSlot: Record<Pose, { slot: string; label: string }> = {
+const poseSlot: Record<MascotPose, { slot: string; label: string }> = {
   waving: { slot: 'mascot.login-welcome', label: 'maskot kucing - login welcome' },
   reading: { slot: 'mascot.loading', label: 'maskot kucing - loading' },
   sleeping: { slot: 'mascot.bedtime', label: 'maskot kucing - sleepy' },
@@ -10,11 +10,13 @@ const poseSlot: Record<Pose, { slot: string; label: string }> = {
   locked: { slot: 'mascot.locked', label: 'maskot kucing - ask a grown-up' },
   '404': { slot: 'mascot.404', label: 'maskot kucing - page not found' },
   error: { slot: 'mascot.error', label: 'maskot kucing - error' },
-  loading: { slot: 'mascot.loading', label: 'maskot kucing - loading' }
+  loading: { slot: 'mascot.loading', label: 'maskot kucing - loading' },
+  hero: { slot: 'hero.home', label: 'maskot kucing - hero' },
+  emptyLibrary: { slot: 'mascot.empty-library', label: 'maskot kucing - empty library' }
 };
 
 interface MascotProps {
-  pose?: Pose;
+  pose?: MascotPose;
   size?: 'sm' | 'md' | 'lg';
   speech?: string;
   className?: string;

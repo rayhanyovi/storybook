@@ -1,48 +1,59 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Baby, BookOpen, Crown, Home, LockKeyhole, LogOut, Settings, Star } from 'lucide-react';
+import { Baby, BarChart3, BookOpen, Crown, Home, LockKeyhole, LogOut, Search, Settings, Star } from 'lucide-react';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { ChunkyButton } from '@/components/ChunkyButton';
 import { ParentGate } from '@/components/ParentGate';
+import { PlaceholderImage } from '@/components/PlaceholderImage';
+import { ScreenTimeSetup } from '@/components/ScreenTimeSetup';
 import { useAuth } from '@/providers/AuthProvider';
 import { useMode } from '@/providers/ModeProvider';
+import { useScreenTime } from '@/providers/ScreenTimeProvider';
 import { useLibrary } from '@/hooks/useBooks';
+import { cn } from '@/lib/utils';
 
-interface Props {
+interface SheetProps {
   open: boolean;
   onOpenChange: (v: boolean) => void;
 }
 
-function useIsDesktop() {
-  const [isDesktop, setIsDesktop] = useState(false);
+interface ProfileContentProps {
+  onClose?: () => void;
+  className?: string;
+}
+
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(false);
 
   useEffect(() => {
-    const media = window.matchMedia('(min-width: 1024px)');
-    const update = () => setIsDesktop(media.matches);
+    const media = window.matchMedia(query);
+    const update = () => setMatches(media.matches);
     update();
     media.addEventListener('change', update);
     return () => media.removeEventListener('change', update);
-  }, []);
+  }, [query]);
 
-  return isDesktop;
+  return matches;
 }
 
-export function ProfileSheet({ open, onOpenChange }: Props) {
+export function ProfileContent({ onClose, className }: ProfileContentProps) {
   const { user, logout } = useAuth();
   const { isKid, setMode } = useMode();
   const { data: library } = useLibrary();
+  const { startKidSession, clearKidSession } = useScreenTime();
   const navigate = useNavigate();
   const location = useLocation();
-  const isDesktop = useIsDesktop();
   const [showGate, setShowGate] = useState(false);
+  const [showScreenTimeSetup, setShowScreenTimeSetup] = useState(false);
 
   const initial = user?.email?.[0]?.toUpperCase() ?? 'U';
   const name = user?.email?.split('@')[0] ?? '';
+  const favorite = library?.favoriteBooks?.[0];
 
   function close() {
-    onOpenChange(false);
+    onClose?.();
   }
 
   function go(path: string) {
@@ -52,12 +63,18 @@ export function ProfileSheet({ open, onOpenChange }: Props) {
 
   function handleModeChange(next: boolean) {
     if (next) {
-      setMode('kid');
-      navigate('/');
-      close();
+      setShowScreenTimeSetup(true);
     } else {
       setShowGate(true);
     }
+  }
+
+  function startKidMode(minutes: number) {
+    startKidSession(minutes);
+    setMode('kid');
+    setShowScreenTimeSetup(false);
+    navigate('/');
+    close();
   }
 
   function handleSubscribe() {
@@ -66,24 +83,14 @@ export function ProfileSheet({ open, onOpenChange }: Props) {
   }
 
   function handleLogout() {
+    clearKidSession();
     logout();
-    navigate('/login');
+    navigate('/auth/login');
     close();
   }
 
-  useEffect(() => {
-    if (!open || !isDesktop) return;
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') close();
-    }
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isDesktop, open]);
-
-  const menuContent = (
-    <>
+  return (
+    <div className={cn('flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--background)]', className)}>
       <div className="bg-[var(--primary)] p-6 text-white">
         <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-white/25 font-[family-name:var(--font-display)] text-2xl font-semibold">
           {initial}
@@ -120,6 +127,30 @@ export function ProfileSheet({ open, onOpenChange }: Props) {
           />
         </div>
 
+        {favorite && (
+          <button
+            type="button"
+            onClick={() => go(`/book/${favorite.book.id}`)}
+            className="mb-3 flex items-center gap-3 rounded-2xl border border-[var(--line)] bg-[var(--card)] p-3 text-left transition hover:bg-[var(--muted)]"
+          >
+            <PlaceholderImage
+              slot={favorite.book.coverSlot ?? `book.cover.${favorite.book.slug}`}
+              label={`cover - ${favorite.book.title}`}
+              ratio="4/3"
+              className="h-16 w-[5.35rem] shrink-0 rounded-xl"
+            />
+            <div className="min-w-0">
+              <p className="text-xs font-extrabold uppercase tracking-[0.12em] text-[var(--ink-soft)]">Most read</p>
+              <p className="line-clamp-1 font-[family-name:var(--font-display)] text-sm font-semibold text-[var(--ink)]">
+                {favorite.book.title}
+              </p>
+              <p className="text-xs font-bold text-[var(--ink-soft)]">
+                {favorite.readCount} reads · page {favorite.currentPage}
+              </p>
+            </div>
+          </button>
+        )}
+
         {library?.hasActiveSub ? (
           <div className="mb-1 flex items-center gap-2 px-2 py-2">
             <Star className="h-4 w-4 text-[var(--color-success)]" />
@@ -138,8 +169,8 @@ export function ProfileSheet({ open, onOpenChange }: Props) {
 
         {([
           { label: 'Discover', icon: Home, path: '/' },
+          { label: 'Search', icon: Search, path: '/search' },
           { label: 'My Library', icon: BookOpen, path: '/library' },
-          ...(!isKid ? [{ label: 'Account & Subscription', icon: Settings, path: '/parent' }] : []),
           ...(user?.role === 'ADMIN' ? [{ label: 'Admin Panel', icon: Settings, path: '/admin' }] : []),
         ] as { label: string; icon: typeof Home; path: string }[]).map(item => (
           <button
@@ -151,6 +182,26 @@ export function ProfileSheet({ open, onOpenChange }: Props) {
             <span className="font-[family-name:var(--font-body)] text-[var(--color-ink)]">{item.label}</span>
           </button>
         ))}
+
+        {!isKid && (
+          <>
+            <Separator className="my-2" />
+            <p className="px-2 py-1 text-xs font-extrabold uppercase tracking-[0.14em] text-[var(--ink-soft)]">For Parent</p>
+            {([
+              { label: 'Account and Subscription', icon: Settings, path: '/parent' },
+              { label: 'Child Progress', icon: BarChart3, path: '/parent/child-progress' }
+            ] as { label: string; icon: typeof Home; path: string }[]).map(item => (
+              <button
+                key={item.path}
+                onClick={() => go(item.path)}
+                className="flex w-full items-center gap-3 rounded-xl px-2 py-3 text-left transition-colors hover:bg-[var(--color-muted)]"
+              >
+                <item.icon className="h-5 w-5 text-[var(--color-ink-soft)]" />
+                <span className="font-[family-name:var(--font-body)] text-[var(--color-ink)]">{item.label}</span>
+              </button>
+            ))}
+          </>
+        )}
 
         <Separator className="my-2" />
 
@@ -167,8 +218,43 @@ export function ProfileSheet({ open, onOpenChange }: Props) {
           <p>Developed by Muhammad Rayhan Yovi for Technical Test Purpose.</p>
         </div>
       </div>
-    </>
+
+      {showGate && (
+        <ParentGate
+          onSuccess={() => { setShowGate(false); setMode('parent'); close(); }}
+          onCancel={() => setShowGate(false)}
+        />
+      )}
+      {showScreenTimeSetup && (
+        <ScreenTimeSetup
+          onStart={startKidMode}
+          onCancel={() => setShowScreenTimeSetup(false)}
+        />
+      )}
+    </div>
   );
+}
+
+export function ProfileSheet({ open, onOpenChange }: SheetProps) {
+  const isMobile = useMediaQuery('(max-width: 767px)');
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
+
+  function close() {
+    onOpenChange(false);
+  }
+
+  useEffect(() => {
+    if (!open || !isDesktop) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') close();
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isDesktop, open]);
+
+  if (isMobile) return null;
 
   return (
     <>
@@ -184,7 +270,7 @@ export function ProfileSheet({ open, onOpenChange }: Props) {
             <div className="pointer-events-none fixed inset-x-0 top-[4.75rem] z-50 px-4 md:px-7">
               <div className="mx-auto flex max-w-6xl justify-end">
                 <div className="pointer-events-auto flex max-h-[calc(100vh-6rem)] w-96 flex-col overflow-hidden rounded-[1.35rem] border border-[var(--line)] bg-[var(--background)] shadow-[0_24px_64px_rgba(58,46,40,0.18)] animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-150">
-                  {menuContent}
+                  <ProfileContent onClose={close} />
                 </div>
               </div>
             </div>
@@ -193,16 +279,9 @@ export function ProfileSheet({ open, onOpenChange }: Props) {
       ) : (
         <Sheet open={open} onOpenChange={onOpenChange}>
           <SheetContent side="right" className="flex w-80 flex-col gap-0 bg-[var(--background)] p-0 data-[state=closed]:duration-300 data-[state=open]:duration-300">
-            {menuContent}
+            <ProfileContent onClose={close} />
           </SheetContent>
         </Sheet>
-      )}
-
-      {showGate && (
-        <ParentGate
-          onSuccess={() => { setShowGate(false); setMode('parent'); close(); }}
-          onCancel={() => setShowGate(false)}
-        />
       )}
     </>
   );

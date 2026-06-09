@@ -7,9 +7,10 @@ import {
   adminCreateBook,
   adminUpdateBook,
   adminUpdateBookContent,
-  adminArchiveBook
+  adminArchiveBook,
+  updateReadingProgress
 } from './books.service.js';
-import { listBooksSchema } from './books.schema.js';
+import { readingProgressSchema, listBooksSchema } from './books.schema.js';
 import type { CreateBookBody, UpdateBookBody, UpdateBookContentBody } from './books.schema.js';
 
 export const listBooksHandler: RequestHandler = async (req, res, next) => {
@@ -79,6 +80,16 @@ export const adminUpdateBookContentHandler: RequestHandler = async (req, res, ne
 export const archiveBookHandler: RequestHandler = async (req, res, next) => {
   try {
     const result = await adminArchiveBook(req.params['id'] as string);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const updateReadingProgressHandler: RequestHandler = async (req, res, next) => {
+  try {
+    const body = readingProgressSchema.parse(req.body);
+    const result = await updateReadingProgress(req.user, req.params['id'] as string, body);
     res.json(result);
   } catch (err) {
     next(err);

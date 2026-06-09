@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { BookOpen, CalendarDays, CheckCircle2, ChevronLeft, Crown, CreditCard, Lock } from 'lucide-react';
+import { BarChart3, BookOpen, CalendarDays, CheckCircle2, ChevronLeft, Crown, CreditCard, Lock } from 'lucide-react';
 import { PlaceholderImage } from '@/components/PlaceholderImage';
 import { AccessBadge } from '@/components/AccessBadge';
 import { AppHeader } from '@/components/AppHeader';
@@ -62,6 +62,8 @@ export default function BookDetailPage() {
   const canRead = book.access.canAccess;
   const canBuyToKeep = !isKid && book.priceCents > 0 && book.access.reason === 'SUBSCRIPTION';
   const shouldShowParentPurchase = !isKid && !canRead && book.priceCents > 0;
+  const isInProgress = book.currentPage > 1 && book.currentPage < book.pageCount;
+  const isCompleted = book.currentPage >= book.pageCount && book.readCount > 0;
 
   return (
     <div className="min-h-screen bg-[var(--background)] pb-24 md:pb-12">
@@ -74,7 +76,7 @@ export default function BookDetailPage() {
               <PlaceholderImage
                 slot={book.coverSlot ?? `book.cover.${book.slug}`}
                 label={`cover - ${book.title}`}
-                ratio="3/4"
+                ratio="4/3"
                 className="rounded-none border-0"
               />
               <div className="absolute left-4 top-4">
@@ -124,6 +126,16 @@ export default function BookDetailPage() {
                 <BookOpen className="h-3.5 w-3.5" />
                 {book.pageCount} pages
               </span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--muted)] px-3 py-1.5 text-xs font-extrabold text-[var(--ink-soft)]">
+                <BarChart3 className="h-3.5 w-3.5" />
+                {book.readCount} reads
+              </span>
+              {(isInProgress || isCompleted) && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-[var(--secondary)]/30 px-3 py-1.5 text-xs font-extrabold text-[var(--ink)]">
+                  <BookOpen className="h-3.5 w-3.5" />
+                  {isCompleted ? 'Completed' : `Continue from page ${book.currentPage}`}
+                </span>
+              )}
             </div>
 
             <p className="mt-5 text-base font-semibold leading-relaxed text-[var(--ink-soft)]">
@@ -153,7 +165,7 @@ export default function BookDetailPage() {
                 <div className="flex flex-wrap gap-3">
                   <ChunkyButton size="lg" onClick={() => navigate(`/read/${book.id}`)}>
                     <BookOpen className="h-5 w-5" />
-                    Read now
+                    {isInProgress ? `Continue page ${book.currentPage}` : isCompleted ? 'Read again' : 'Read now'}
                   </ChunkyButton>
                   {canBuyToKeep && (
                     <ChunkyButton variant="secondary" size="lg" onClick={goPurchase}>

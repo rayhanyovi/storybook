@@ -271,7 +271,7 @@ export default function AdminPage() {
 
   function handleLogout() {
     logout();
-    navigate('/login', { replace: true });
+    navigate('/auth/login', { replace: true });
   }
 
   const books = booksData?.data ?? [];
@@ -377,8 +377,8 @@ export default function AdminPage() {
                             <PlaceholderImage
                               slot={book.coverSlot ?? `book.cover.${book.slug}`}
                               label={`cover - ${book.title}`}
-                              ratio="3/4"
-                              className="h-16 w-12 shrink-0 rounded-xl border-0"
+                              ratio="4/3"
+                              className="h-16 w-[5.35rem] shrink-0 rounded-xl border-0"
                             />
                             <div className="min-w-0">
                               <p className="line-clamp-1 font-[family-name:var(--font-display)] font-semibold text-[var(--ink)]">{book.title}</p>
@@ -445,8 +445,8 @@ export default function AdminPage() {
                       <PlaceholderImage
                         slot={book.coverSlot ?? `book.cover.${book.slug}`}
                         label={`cover - ${book.title}`}
-                        ratio="3/4"
-                        className="h-24 w-[4.5rem] shrink-0 rounded-xl border-0"
+                        ratio="4/3"
+                        className="h-24 w-32 shrink-0 rounded-xl border-0"
                       />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-2">

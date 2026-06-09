@@ -7,21 +7,29 @@ import { Toaster } from '@/components/ui/sonner';
 import { AuthProvider, useAuth } from '@/providers/AuthProvider';
 import { ModeProvider, useMode } from '@/providers/ModeProvider';
 import { PinProvider } from '@/providers/PinProvider';
+import { ScreenTimeProvider } from '@/providers/ScreenTimeProvider';
 import { useMe } from '@/hooks/useAuth';
 import LoginPage from '@/pages/LoginPage';
+import RegisterPage from '@/pages/RegisterPage';
+import LandingPage from '@/pages/LandingPage';
 import OnboardingPage from '@/pages/OnboardingPage';
 import KidHomePage from '@/pages/KidHomePage';
+import SearchPage from '@/pages/SearchPage';
 import BookDetailPage from '@/pages/BookDetailPage';
 import ReaderPage from '@/pages/ReaderPage';
 import ParentPage from '@/pages/ParentPage';
+import ChildProgressPage from '@/pages/ChildProgressPage';
 import CheckoutPage from '@/pages/CheckoutPage';
 import AdminPage from '@/pages/AdminPage';
 import AdminBookContentPage from '@/pages/AdminBookContentPage';
 import NotFoundPage from '@/pages/NotFoundPage';
 import LibraryPage from '@/pages/LibraryPage';
+import ProfilePage from '@/pages/ProfilePage';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { PageTransition } from '@/components/PageTransition';
 import { ParentGate } from '@/components/ParentGate';
+import { BottomTabBar } from '@/components/BottomTabBar';
+import { ScreenTimeExpiredGate } from '@/components/ScreenTimeExpiredGate';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } }
@@ -30,7 +38,7 @@ const queryClient = new QueryClient({
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { token } = useAuth();
   const location = useLocation();
-  if (!token) return <Navigate to="/login" state={{ from: location }} replace />;
+  if (!token) return <Navigate to="/auth/login" state={{ from: location }} replace />;
   return <>{children}</>;
 }
 
@@ -75,26 +83,35 @@ function AppRoutes() {
     if (token && me.isError) logout();
   }, [logout, me.isError, token]);
 
-  if (token && me.isError) return <Navigate to="/login" replace />;
+  if (token && me.isError) return <Navigate to="/auth/login" replace />;
   if (token && !user && me.isLoading) return <LoadingShell />;
 
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        <Route path="/login" element={<PageTransition>{token ? <Navigate to="/" replace /> : <LoginPage />}</PageTransition>} />
+        <Route path="/auth" element={<Navigate to="/auth/login" replace />} />
+        <Route path="/auth/login" element={<PageTransition>{token ? <Navigate to="/" replace /> : <LoginPage />}</PageTransition>} />
+        <Route path="/auth/register" element={<PageTransition>{token ? <Navigate to="/" replace /> : <RegisterPage />}</PageTransition>} />
+        <Route path="/login" element={<Navigate to="/auth/login" replace />} />
+        <Route path="/register" element={<Navigate to="/auth/register" replace />} />
         <Route path="/onboarding" element={<PageTransition><RequireAuth><OnboardingPage /></RequireAuth></PageTransition>} />
         <Route path="/" element={
           <PageTransition>
-            <RequireAuth>
-              {user?.role === 'ADMIN' ? <Navigate to="/admin" replace /> : <KidHomePage />}
-            </RequireAuth>
+            {token
+              ? user?.role === 'ADMIN'
+                ? <Navigate to="/admin" replace />
+                : <KidHomePage />
+              : <LandingPage />}
           </PageTransition>
         } />
+        <Route path="/search" element={<PageTransition><RequireAuth><SearchPage /></RequireAuth></PageTransition>} />
         <Route path="/library" element={<PageTransition><RequireAuth><LibraryPage /></RequireAuth></PageTransition>} />
+        <Route path="/profile" element={<PageTransition><RequireAuth><ProfilePage /></RequireAuth></PageTransition>} />
         <Route path="/book/:id" element={<PageTransition><RequireAuth><BookDetailPage /></RequireAuth></PageTransition>} />
         <Route path="/read/:id" element={<PageTransition><RequireAuth><ReaderPage /></RequireAuth></PageTransition>} />
         <Route path="/checkout" element={<PageTransition><RequireAuth><CheckoutPage /></RequireAuth></PageTransition>} />
         <Route path="/parent" element={<PageTransition><RequireAuth><RequireParentMode><ParentPage /></RequireParentMode></RequireAuth></PageTransition>} />
+        <Route path="/parent/child-progress" element={<PageTransition><RequireAuth><RequireParentMode><ChildProgressPage /></RequireParentMode></RequireAuth></PageTransition>} />
         <Route path="/admin" element={<PageTransition><RequireAuth><RequireAdmin><AdminPage /></RequireAdmin></RequireAuth></PageTransition>} />
         <Route path="/admin/books/:id/content" element={<PageTransition><RequireAuth><RequireAdmin><AdminBookContentPage /></RequireAdmin></RequireAuth></PageTransition>} />
         <Route path="/admin/book/:id" element={<PageTransition><RequireAuth><RequireAdmin><AdminPage /></RequireAdmin></RequireAuth></PageTransition>} />
@@ -104,17 +121,40 @@ function AppRoutes() {
   );
 }
 
+function PersistentBottomBar() {
+  const { token, user } = useAuth();
+  const { pathname } = useLocation();
+
+  const shouldShow =
+    token &&
+    user?.role !== 'ADMIN' &&
+    (
+      pathname === '/' ||
+      pathname === '/search' ||
+      pathname === '/library' ||
+      pathname === '/profile' ||
+      pathname.startsWith('/book/')
+    );
+
+  if (!shouldShow) return null;
+  return <BottomTabBar />;
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <ModeProvider>
           <PinProvider>
-            <BrowserRouter>
-              <ErrorBoundary>
-                <AppRoutes />
-              </ErrorBoundary>
-            </BrowserRouter>
+            <ScreenTimeProvider>
+              <BrowserRouter>
+                <ErrorBoundary>
+                  <AppRoutes />
+                  <PersistentBottomBar />
+                  <ScreenTimeExpiredGate />
+                </ErrorBoundary>
+              </BrowserRouter>
+            </ScreenTimeProvider>
             <Toaster richColors position="top-right" />
           </PinProvider>
         </ModeProvider>

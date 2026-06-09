@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, BookImage, CheckCircle2, ChevronLeft, ChevronRight, FileText, Loader2, Plus, Save, Type } from 'lucide-react';
+import { ArrowLeft, BookImage, CheckCircle2, ChevronLeft, ChevronRight, FileText, Loader2, Plus, Save, Trash2, Type } from 'lucide-react';
 import { ChunkyButton } from '@/components/ChunkyButton';
 import { PlaceholderImage } from '@/components/PlaceholderImage';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -40,6 +41,10 @@ function normalizePages(pages: BookPage[], pageCount: number, book: BookWithAcce
     const existing = pages.find(page => page.index === index);
     return existing ?? fallbackPage(book, index);
   });
+}
+
+function reindexPages(pages: BookPage[]) {
+  return pages.map((page, i) => ({ ...page, index: i + 1 }));
 }
 
 export default function AdminBookContentPage() {
@@ -89,6 +94,17 @@ export default function AdminBookContentPage() {
     const nextSlide = pages.length + 1;
     setPages(prev => [...prev, fallbackPage(book, prev.length + 1)]);
     setSlideIndex(nextSlide);
+  }
+
+  function deleteCurrentPage() {
+    if (isCover || pageArrayIndex < 0 || pages.length <= MIN_PAGE_COUNT) return;
+
+    setPages(prev => {
+      const nextPages = reindexPages(prev.filter((_, index) => index !== pageArrayIndex));
+      setSlideIndex(Math.min(slideIndex, nextPages.length));
+      return nextPages;
+    });
+    toast.info('Page removed. Save to apply it.');
   }
 
   async function saveContent() {
@@ -227,10 +243,43 @@ export default function AdminBookContentPage() {
               </h3>
             </div>
             {!isCover && currentPage && (
-              <span className="inline-flex w-fit items-center gap-2 rounded-full bg-[var(--muted)] px-3 py-1.5 text-xs font-extrabold text-[var(--ink-soft)]">
-                <Type className="h-3.5 w-3.5" />
-                {currentPage.text.trim().length} chars
-              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex w-fit items-center gap-2 rounded-full bg-[var(--muted)] px-3 py-1.5 text-xs font-extrabold text-[var(--ink-soft)]">
+                  <Type className="h-3.5 w-3.5" />
+                  {currentPage.text.trim().length} chars
+                </span>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <button
+                      type="button"
+                      disabled={pages.length <= MIN_PAGE_COUNT}
+                      className="inline-flex min-h-9 items-center gap-2 rounded-full bg-red-50 px-3 py-1.5 text-xs font-extrabold text-[var(--color-destructive)] transition hover:bg-red-100 disabled:pointer-events-none disabled:opacity-50"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Delete page
+                    </button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="bg-[var(--background)]">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="font-[family-name:var(--font-display)] text-[var(--ink)]">
+                        Delete page {slideIndex}?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription className="font-[family-name:var(--font-body)] font-semibold text-[var(--ink-soft)]">
+                        This removes the current page from the editor and shifts the following pages forward. Press Save to make it permanent.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel className="rounded-xl font-[family-name:var(--font-body)]">Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={deleteCurrentPage}
+                        className="rounded-xl bg-[var(--color-destructive)] font-[family-name:var(--font-body)] text-white hover:bg-red-600"
+                      >
+                        Delete page
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
             )}
           </div>
 
@@ -238,8 +287,8 @@ export default function AdminBookContentPage() {
             <PlaceholderImage
               slot={isCover ? previewCoverSlot : currentPage?.imageSlot ?? previewCoverSlot}
               label={isCover ? `cover - ${book.title}` : currentPage?.label ?? `page - ${book.title}`}
-              ratio="3/4"
-              className="mx-auto w-full max-w-[20rem] rounded-[1.25rem] border border-[var(--line)]"
+              ratio="4/3"
+              className="mx-auto w-full max-w-[28rem] rounded-[1.25rem] border border-[var(--line)]"
             />
 
             {isCover ? (

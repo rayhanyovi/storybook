@@ -86,8 +86,8 @@ function FeaturedBook({
           <PlaceholderImage
             slot={book.coverSlot ?? `book.cover.${book.slug}`}
             label={`cover - ${book.title}`}
-            // ratio="3/4"
-            className="h-full min-h-[1rem] rounded-none border-0"
+            ratio="4/3"
+            className="rounded-none border-0"
           />
         
         </div>
@@ -265,7 +265,11 @@ export default function KidHomePage() {
                   variants={{ hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0 } }}
                   transition={{ duration: 0.22 }}
                 >
-                  <BookCard book={book} kidMode={isKid} onLocked={() => handleLocked(book.id)} />
+                  <BookCard
+                    book={book}
+                    kidMode={isKid}
+                    onLocked={() => handleLocked(book.id)}
+                  />
                 </motion.div>
               ))}
             </motion.div>

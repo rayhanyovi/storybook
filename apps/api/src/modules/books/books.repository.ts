@@ -6,6 +6,12 @@ import type { JwtPayload } from '../../middleware/auth.js';
 const bookInclude = { categories: true } satisfies Prisma.BookInclude;
 
 export type BookWithCategories = Prisma.BookGetPayload<{ include: typeof bookInclude }>;
+export type BookEngagement = {
+  bookId: string;
+  currentPage: number;
+  readCount: number;
+  lastReadAt: Date | null;
+};
 
 function buildVisibilityWhere(user: JwtPayload): Prisma.BookWhereInput {
   if (user.role === 'ADMIN') return {};
@@ -52,6 +58,31 @@ export async function findBookById(id: string, user: JwtPayload) {
     ...buildVisibilityWhere(user)
   };
   return prisma.book.findFirst({ where, include: bookInclude });
+}
+
+export async function findBookEngagement(userId: string, bookIds: string[]): Promise<Map<string, BookEngagement>> {
+  if (bookIds.length === 0) return new Map();
+
+  const progress = await prisma.readingProgress.findMany({
+    where: { userId, bookId: { in: bookIds } },
+    select: { bookId: true, currentPage: true, readCount: true, lastReadAt: true }
+  });
+  const progressByBook = new Map(progress.map(item => [item.bookId, item]));
+
+  return new Map(
+    bookIds.map(bookId => {
+      const item = progressByBook.get(bookId);
+      return [
+        bookId,
+        {
+          bookId,
+          currentPage: item?.currentPage ?? 1,
+          readCount: item?.readCount ?? 0,
+          lastReadAt: item?.lastReadAt ?? null
+        }
+      ];
+    })
+  );
 }
 
 export async function findBookPages(bookId: string) {

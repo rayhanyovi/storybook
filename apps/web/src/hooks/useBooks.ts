@@ -3,7 +3,28 @@ import type { AdminBookContentDTO, BookWithAccess, BookDTO, BookContent, Categor
 import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/queryKeys';
 
-interface BooksResponse { data: BookWithAccess[]; page: number; limit: number; total: number; }
+export type BookWithTracking = BookWithAccess & {
+  currentPage: number;
+  readCount: number;
+  lastReadAt: string | null;
+};
+
+export type ReadingProgressItem = {
+  book: BookDTO;
+  currentPage: number;
+  readCount: number;
+  lastReadAt: string;
+};
+
+export interface LibraryResponse {
+  subscription: { status: string; expiresAt: string } | null;
+  owned: BookDTO[];
+  readingProgress: ReadingProgressItem[];
+  favoriteBooks: ReadingProgressItem[];
+  hasActiveSub: boolean;
+}
+
+interface BooksResponse { data: BookWithTracking[]; page: number; limit: number; total: number; }
 interface BooksParams { category?: string; page?: number; limit?: number; q?: string; }
 
 export function useBooks(params?: BooksParams) {
@@ -17,9 +38,9 @@ export function useBooks(params?: BooksParams) {
 }
 
 export function useBook(id: string, enabled = true) {
-  return useQuery<BookWithAccess>({
+  return useQuery<BookWithTracking>({
     queryKey: queryKeys.book(id),
-    queryFn: () => api.get<BookWithAccess>(`/books/${id}`),
+    queryFn: () => api.get<BookWithTracking>(`/books/${id}`),
     enabled: enabled && !!id
   });
 }
@@ -50,7 +71,23 @@ export function useCategories() {
 export function useLibrary() {
   return useQuery({
     queryKey: queryKeys.library,
-    queryFn: () => api.get<{ subscription: { status: string; expiresAt: string } | null; owned: BookDTO[]; hasActiveSub: boolean }>('/me/library')
+    queryFn: () => api.get<LibraryResponse>('/me/library')
+  });
+}
+
+export function useUpdateReadingProgress() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ bookId, currentPage, completed = false }: { bookId: string; currentPage: number; completed?: boolean }) =>
+      api.post<{ bookId: string; currentPage: number; readCount: number; lastReadAt: string }>(
+        `/books/${bookId}/progress`,
+        { currentPage, completed }
+      ),
+    onSuccess: (_result, variables) => {
+      qc.invalidateQueries({ queryKey: ['books'] });
+      qc.invalidateQueries({ queryKey: queryKeys.book(variables.bookId) });
+      qc.invalidateQueries({ queryKey: queryKeys.library });
+    }
   });
 }
 
