@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import {
   BookOpen,
   CheckCircle2,
@@ -14,7 +15,8 @@ import { PlaceholderImage } from '@/components/PlaceholderImage';
 import { ChunkyButton } from '@/components/ChunkyButton';
 import { Mascot } from '@/components/Mascot';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useLibrary } from '@/hooks/useBooks';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { useLibrary, useResetDemoState } from '@/hooks/useBooks';
 
 function formatDate(date: string) {
   return new Date(date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
@@ -23,6 +25,7 @@ function formatDate(date: string) {
 export default function ParentPage() {
   const navigate = useNavigate();
   const { data: library, isLoading } = useLibrary();
+  const resetDemoState = useResetDemoState();
 
   function exitParent() {
     navigate('/');
@@ -30,6 +33,15 @@ export default function ParentPage() {
 
   function handleSubscribe() {
     navigate(`/checkout?type=subscription&returnTo=${encodeURIComponent('/parent')}`);
+  }
+
+  async function handleResetDemoState() {
+    try {
+      await resetDemoState.mutateAsync();
+      toast.success('Demo data reset.');
+    } catch {
+      toast.error('Failed to reset demo data.');
+    }
   }
 
   return (
@@ -138,6 +150,31 @@ export default function ParentPage() {
               <LibraryBig className="h-5 w-5" />
               Browse catalog
             </ChunkyButton>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <ChunkyButton variant="ghost" className="mt-3 w-full" disabled={resetDemoState.isPending}>
+                  <RefreshCw className="h-5 w-5" />
+                  Reset demo data
+                </ChunkyButton>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="bg-[var(--background)]">
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="font-[family-name:var(--font-display)] text-[var(--ink)]">Reset this parent account?</AlertDialogTitle>
+                  <AlertDialogDescription className="font-[family-name:var(--font-body)] font-semibold text-[var(--ink-soft)]">
+                    This removes this user's subscription, purchases, payment history, and reading progress so the demo starts fresh.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel className="rounded-xl font-[family-name:var(--font-body)]">Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleResetDemoState}
+                    className="rounded-xl bg-[var(--destructive)] font-[family-name:var(--font-body)] font-extrabold text-white hover:bg-[var(--destructive)]/90"
+                  >
+                    Reset
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
 
           <div className="rounded-[1.6rem] border border-[var(--line)] bg-[var(--card)] p-5 shadow-[0_14px_34px_rgba(58,46,40,0.08)]">

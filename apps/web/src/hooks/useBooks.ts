@@ -151,3 +151,20 @@ export function usePurchase() {
     }
   });
 }
+
+export function useResetDemoState() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post<{
+      readingProgress: number;
+      purchases: number;
+      subscriptions: number;
+      payments: number;
+    }>('/auth/demo/reset', {}),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['books'] });
+      qc.invalidateQueries({ queryKey: ['book'] });
+      qc.invalidateQueries({ queryKey: queryKeys.library });
+    }
+  });
+}

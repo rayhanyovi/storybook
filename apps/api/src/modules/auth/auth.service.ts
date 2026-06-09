@@ -40,6 +40,22 @@ export async function completeOnboarding(userId: string): Promise<{ onboardingCo
   return { onboardingCompletedAt: user.onboardingCompletedAt!.toISOString() };
 }
 
+export async function resetDemoState(userId: string) {
+  const result = await prisma.$transaction([
+    prisma.readingProgress.deleteMany({ where: { userId } }),
+    prisma.purchase.deleteMany({ where: { userId } }),
+    prisma.subscription.deleteMany({ where: { userId } }),
+    prisma.payment.deleteMany({ where: { userId } })
+  ]);
+
+  return {
+    readingProgress: result[0].count,
+    purchases: result[1].count,
+    subscriptions: result[2].count,
+    payments: result[3].count
+  };
+}
+
 export async function login(email: string, password: string) {
   const user = await prisma.user.findUnique({ where: { email } });
 

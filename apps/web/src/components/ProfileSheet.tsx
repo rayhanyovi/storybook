@@ -6,7 +6,6 @@ import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { ChunkyButton } from '@/components/ChunkyButton';
 import { ParentGate } from '@/components/ParentGate';
-import { PlaceholderImage } from '@/components/PlaceholderImage';
 import { ScreenTimeSetup } from '@/components/ScreenTimeSetup';
 import { useAuth } from '@/providers/AuthProvider';
 import { useMode } from '@/providers/ModeProvider';
@@ -50,7 +49,6 @@ export function ProfileContent({ onClose, className }: ProfileContentProps) {
 
   const initial = user?.email?.[0]?.toUpperCase() ?? 'U';
   const name = user?.email?.split('@')[0] ?? '';
-  const favorite = library?.favoriteBooks?.[0];
 
   function close() {
     onClose?.();
@@ -126,30 +124,6 @@ export function ProfileContent({ onClose, className }: ProfileContentProps) {
             className="shrink-0"
           />
         </div>
-
-        {favorite && (
-          <button
-            type="button"
-            onClick={() => go(`/book/${favorite.book.id}`)}
-            className="mb-3 flex items-center gap-3 rounded-2xl border border-[var(--line)] bg-[var(--card)] p-3 text-left transition hover:bg-[var(--muted)]"
-          >
-            <PlaceholderImage
-              slot={favorite.book.coverSlot ?? `book.cover.${favorite.book.slug}`}
-              label={`cover - ${favorite.book.title}`}
-              ratio="4/3"
-              className="h-16 w-[5.35rem] shrink-0 rounded-xl"
-            />
-            <div className="min-w-0">
-              <p className="text-xs font-extrabold uppercase tracking-[0.12em] text-[var(--ink-soft)]">Most read</p>
-              <p className="line-clamp-1 font-[family-name:var(--font-display)] text-sm font-semibold text-[var(--ink)]">
-                {favorite.book.title}
-              </p>
-              <p className="text-xs font-bold text-[var(--ink-soft)]">
-                {favorite.readCount} reads · page {favorite.currentPage}
-              </p>
-            </div>
-          </button>
-        )}
 
         {library?.hasActiveSub ? (
           <div className="mb-1 flex items-center gap-2 px-2 py-2">

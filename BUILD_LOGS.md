@@ -887,3 +887,63 @@ pnpm build:vercel
 - Live Supabase deployment still needs real Supabase connection strings and database password from the dashboard.
 - Live Vercel deployment still needs the Storybook project to be imported/linked and env vars set in Vercel.
 - Vite still reports the existing large bundle warning; it is not related to the deployment setup.
+
+---
+
+## 2026-06-09 · Supabase Migration and Seed
+
+**Files changed:**
+- `BUILD_LOGS.md` — recorded Supabase migration and seed verification
+
+**What was implemented:**
+Ran the existing Prisma migrations against the connected Supabase Postgres database, then seeded the demo users, catalog categories, books, and the archived owned-book purchase.
+
+**How to test it:**
+```bash
+pnpm --dir apps/api exec prisma migrate deploy
+pnpm --dir apps/api db:seed
+```
+
+Verified against Supabase:
+- Demo parent login succeeds for `parent@demo.com`
+- Database contains 2 users, 8 books, 4 categories, and 1 purchase
+- Published/archived demo catalog split is 7 published books and 1 archived owned book
+
+**Known issues:**
+- Supabase page text was added in the later "Demo Reset and Narration Seed Text" task.
+- Rotate the Supabase database password because a temporary credential was shared during setup.
+
+---
+
+## 2026-06-09 · Demo Reset and Narration Seed Text
+
+**Files changed:**
+- `apps/api/prisma/seed.ts` — added seeded page text for every demo book page
+- `apps/api/src/modules/auth/auth.service.ts` — added current-user demo reset transaction
+- `apps/api/src/modules/auth/auth.controller.ts` — added demo reset handler
+- `apps/api/src/modules/auth/auth.routes.ts` — exposed `POST /api/auth/demo/reset` for parent users
+- `apps/web/src/hooks/useBooks.ts` — added reset-demo mutation and cache invalidation
+- `apps/web/src/pages/ParentPage.tsx` — added parent-mode reset button with confirmation
+- `apps/web/src/pages/LandingPage.tsx` — routed landing CTAs to sign in/demo profiles instead of sign up
+- `apps/web/src/components/ProfileSheet.tsx` — removed the most-read card from the profile menu
+- `BUILD_LOGS.md` — recorded this task
+
+**What was implemented:**
+Seeded story text now exists for all 54 demo book pages so read-aloud has content immediately after seeding. Parent mode now has a reset action that removes the signed-in user's subscription, purchases, payment history, and reading progress while leaving catalog/book/page data intact. Landing page demo CTAs now go to `/auth/login`.
+
+**How to test it:**
+```bash
+pnpm --dir apps/api db:seed
+pnpm --filter @storybook/api build
+pnpm --filter @storybook/api test -- --run
+pnpm --filter @storybook/web build
+pnpm build:vercel
+```
+
+Verified against Supabase:
+- `BookPage` count is 54 and seeded pages have narration text
+- Demo parent state was reset to 0 subscriptions, 0 purchases, 0 reading progress, and 0 payments
+
+**Known issues:**
+- Running `pnpm --dir apps/api db:seed` again will restore the seed script's demo purchase for the parent account; use the Parent mode reset button afterward for a fresh user state.
+- Rotate the Supabase database password because a temporary credential was shared during setup.
