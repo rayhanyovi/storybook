@@ -76,7 +76,11 @@ storybook/
 
 ```prisma
 generator client { provider = "prisma-client-js" }
-datasource db { provider = "postgresql"; url = env("DATABASE_URL") }
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
 
 enum Role          { ADMIN  USER }
 enum BookStatus    { DRAFT  PUBLISHED  ARCHIVED }
@@ -347,9 +351,11 @@ volumes: { pgdata: {} }
 `.env.example`:
 ```
 DATABASE_URL=postgresql://storybook:storybook@localhost:5432/storybook
+DIRECT_URL=postgresql://storybook:storybook@localhost:5432/storybook
 JWT_SECRET=change-me
 PORT=3000
 NODE_ENV=development
+CORS_ORIGIN=http://localhost:5173
 VITE_API_URL=http://localhost:3000/api
 ```
 

@@ -195,7 +195,8 @@ storybook/
    - **Output:** `apps/web/dist`
    - **API:** Express is mounted through `api/index.ts` and served under `/api/*`.
 4. Set env vars in Vercel:
-   - `DATABASE_URL` — Neon or Supabase pooled PostgreSQL connection string
+   - `DATABASE_URL` — Supabase Supavisor transaction pooler URL for serverless runtime, usually port `6543`
+   - `DIRECT_URL` — Supabase direct database URL or session pooler URL for Prisma migrations, usually port `5432`
    - `JWT_SECRET` — a long random string
    - `CORS_ORIGIN` — your Vercel URL, or leave same-origin browser calls on `/api`
 5. Leave `VITE_API_URL` unset for monorepo deploys. The web app defaults to `/api` in production.
@@ -203,12 +204,19 @@ storybook/
 ### Database → Neon / Supabase
 
 ```bash
-# Get your DATABASE_URL from Neon/Supabase, then run once:
-DATABASE_URL=postgresql://... pnpm exec prisma migrate deploy
-DATABASE_URL=postgresql://... pnpm db:seed
+# Get DATABASE_URL and DIRECT_URL from Supabase, then run once:
+DATABASE_URL=postgresql://... DIRECT_URL=postgresql://... pnpm exec prisma migrate deploy
+DATABASE_URL=postgresql://... DIRECT_URL=postgresql://... pnpm db:seed
 ```
 
 Run those commands from `apps/api` or pass `--schema apps/api/prisma/schema.prisma` when running from the repo root.
+
+For Supabase:
+
+- Runtime on Vercel should use the Supavisor **transaction** pooler connection string for `DATABASE_URL`.
+- Prisma migrations should use a direct database connection or Supavisor **session** connection string for `DIRECT_URL`.
+- If the transaction pooler reports prepared statement errors, add `pgbouncer=true` to the `DATABASE_URL` query string.
+- Create or choose a database role with enough privileges for Prisma before running `migrate deploy`.
 
 ---
 

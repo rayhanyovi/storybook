@@ -859,3 +859,31 @@ Also verified:
 - Supabase production DB is not wired into local env files yet; all checked env files use `localhost:5432`.
 - Vercel project is not linked locally, and the expected production URL is currently not found on Vercel.
 - Vercel CLI and Supabase CLI are not installed in this environment; live Vercel inspection used the connected Vercel app.
+
+---
+
+## 2026-06-09 · Supabase and Vercel Deployment Setup
+
+**Files changed:**
+- `apps/api/prisma/schema.prisma` — added Prisma `directUrl` for migration/direct database connections
+- `.env.example` — documented local and Supabase/Vercel database URL usage
+- `README.md` — tightened Vercel and Supabase deployment instructions
+- `docs/TECH.md` — updated the source-of-truth schema/env examples
+- `BUILD_LOGS.md` — recorded this setup pass
+
+**What was implemented:**
+Prepared the Prisma database configuration for Supabase on Vercel by separating runtime pooled access (`DATABASE_URL`) from direct/session migration access (`DIRECT_URL`). The deployment docs now explain the required Vercel env vars and the one-time Prisma migration/seed commands for Supabase.
+
+**How to test it:**
+```bash
+pnpm --filter @storybook/api db:generate
+pnpm --filter @storybook/api build
+pnpm --filter @storybook/api test -- --run
+pnpm --filter @storybook/web build
+pnpm build:vercel
+```
+
+**Known issues:**
+- Live Supabase deployment still needs real Supabase connection strings and database password from the dashboard.
+- Live Vercel deployment still needs the Storybook project to be imported/linked and env vars set in Vercel.
+- Vite still reports the existing large bundle warning; it is not related to the deployment setup.
